@@ -1,0 +1,1 @@
+//the front door: defines the audit command and its flags, catches what the user types, kicks everything off.

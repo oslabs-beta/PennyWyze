@@ -1,0 +1,1 @@
+//reads the golden dataset file and turns its lines into a usable list of questions, validating each against the schema and complaining helpfully ("line 3 is invalid") on broken lines.

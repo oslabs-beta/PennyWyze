@@ -1,0 +1,1 @@
+//reads the user's prompt file into plain text, with a friendly error if the path is wrong.

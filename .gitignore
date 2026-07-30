@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build outputs
+dist/
+coverage/
+
+# Logs
+*.log
+
+# Claude Code
+.claude/
+
+# Operating system files
+.DS_Store
+Thumbs.db

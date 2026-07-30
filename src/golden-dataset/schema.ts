@@ -1,0 +1,1 @@
+//the format rule in code: the zod shape every golden dataset line must match (input + expected), doubling as our GoldenExample type.

@@ -1,0 +1,1 @@
+//the model-callers: the provider contract, plus the FakeProvider (free pretend answers) and later the AnthropicProvider (real Claude calls).
