@@ -1,1 +1,5 @@
-//the practice quiz: 5 made-up questions with their correct answers, our shared test data.
+{"input":"I was charged twice for my subscription this month.","expected":"billing"}
+{"input":"The app crashes every time I try to upload a file.","expected":"technical"}
+{"input":"I forgot my password and can't sign in to my account.","expected":"account"}
+{"input":"Can you refund my annual subscription?","expected":"billing"}
+{"input":"I'm receiving an error whenever I try to save my changes.","expected":"technical"}
