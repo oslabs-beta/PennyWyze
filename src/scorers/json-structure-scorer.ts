@@ -1,2 +1,0 @@
-//not in the MVP (our demo task doesn't need it): a future grader for structured-JSON answers that compares them as parsed objects, 
-//so field order and formatting don't matter - drops into the scorer contract whenever we want it.
