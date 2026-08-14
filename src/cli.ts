@@ -65,8 +65,13 @@
         (<val> = "a value must follow this flag" · full working
         pattern: Build Plan, Phase 1.1)
 
-    
 
+    Chain order when building a command: identity → inputs → behavior
+        (.command + .description, then flags — required first —
+        then .action last; Commander accepts any order, but this
+        reads like the help screen it generates)
+
+    
     Reminder During Development 
         - In dev, our tool isn't an installed command yet — it runs via
           npm run dev
@@ -75,3 +80,31 @@
         - the lone "--" means "everything after this belongs to my tool":
           npm run dev -- audit --prompt examples/prompt.md --dataset examples/golden-dataset.jsonl
 */
+
+//import Commander 
+import { Command } from "commander"
+
+//store the ready-made object from Commander
+const program = new Command();
+
+
+//let Commander know the name of our product 
+program
+  .name('pennywyze');
+
+
+//make the object that represents our audit command and adds it to what Commander knows - existence and registration
+//this is where will handle the command's name, flags, description, and receiving function 
+program.command('audit') //names the command
+  .description('Benchmark Claude tiers against your golden dataset to return the lowest-cost passing model with projected monthly savings')
+  .requiredOption('--prompt <filepath>', 'path to your prompt file')
+  .requiredOption('--dataset <filepath>', 'path to your golden dataset file')
+  .option('--volume <message-count>', 'number of messages your AI feature handles per month', '100000')
+  .action((options)=>{
+    //convert the inputted volume from text into a number 
+    const volume = Number(options.volume)
+    if(Number.isNaN(volume) || volume <= 0) return console.error('Volume is invalid')
+    console.log(options) //proof of life
+  })
+
+program.parse()
