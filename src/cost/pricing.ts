@@ -14,9 +14,20 @@
     higher than expected later.
 */
 
+type ModelPricing = {
+  in: number;
+  out: number
+}
+
+type ClaudePricing = {
+  haiku: ModelPricing;
+  opus: ModelPricing;
+  sonnet: ModelPricing
+}
+
 export const claudePricing = {
-  haiku: { in: 1, out: 5 },
-  opus:{ in: 5, out: 25 },
-  sonnet: { in: 2, out: 10 }
+  "haiku": { in: 1, out: 5 },
+  "opus":{ in: 5, out: 25 },
+  "sonnet": { in: 2, out: 10 }
 }
 
