@@ -50,3 +50,10 @@
           roughly 5x cheaper than the top tier. A wildly different
           spread means a math bug, not unusual models.
 */
+
+import { claudePricing } from "./pricing.js"
+
+export const costOfCall = (tier: "haiku" | "opus" | "sonnet", inputTokens:number, outputTokens:number):number => {
+  const rates = claudePricing[tier]
+  return (inputTokens * rates.in + outputTokens * rates.out) / 1_000_000
+}
