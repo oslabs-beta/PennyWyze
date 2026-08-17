@@ -45,3 +45,6 @@
         - If any real API money gets spent during Milestone 1,
           something bypassed this file — find it before Milestone 2.
 */
+
+import type { ModelProvider } from './provider.js'
+

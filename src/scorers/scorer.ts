@@ -44,6 +44,6 @@
 */
 
 
-interface Scorer {
+export interface Scorer {
   score(actual: string, expected: string): Promise<boolean>;
 }

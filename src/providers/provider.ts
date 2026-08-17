@@ -77,7 +77,7 @@
 */
 
   
-interface ModelProvider {
+export interface ModelProvider {
     run(
         modelId: string,
         systemPrompt: string,
