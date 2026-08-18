@@ -54,3 +54,45 @@
         - Cheapest PASSER, not cheapest model — the one logic rule
           this file owns, and the easiest to get subtly wrong.
 */
+import Table from "cli-table3"
+
+type FakeModel =  {
+  name: string;
+  score: string;
+  monthlyCost: number;
+  passed: boolean;
+} 
+
+const fakeModels:FakeModel[] = [
+  {
+    name: "Opus",
+    score: "50/50",
+    monthlyCost: 325,
+    passed: true
+  },
+  {
+    name: "Sonnet",
+    score: "50/50",
+    monthlyCost: 195,
+    passed: true
+  },
+  {
+    name: "Haiku",
+    score: "50/50",
+    monthlyCost: 65,
+    passed: true
+  }
+]
+
+export const printReport = (models: FakeModel[]) => {
+  const table = new Table({head: ["MODEL", "ACCURACY", "COST / MONTH"]})
+
+
+  for ( let i = 0; i < fakeModels.length; i++) {
+    const accuracy = fakeModels[i]?.passed ? "PASS" : "FAIL"
+
+    table.push([ fakeModels[i]?.name, `${fakeModels[i]?.score} ${accuracy}`, `$${fakeModels[i]?.monthlyCost} / mo`])
+  }
+
+  console.log(table.toString)
+}
