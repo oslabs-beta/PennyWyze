@@ -28,8 +28,9 @@
           · system: the systemPrompt — a TOP-LEVEL field, not inside
             the messages (gotcha coming from OpenAI)
           · messages: one user message holding userInput
-          · temperature: 0 — our same-answer-every-time setting (per
-            the verify-reality note's findings)
+          · temperature: 0 — ONLY on models that accept it; two dropped 
+            the setting (see the verify-reality note for which). Repeatability 
+            is proven either way by M3's run-the-audit-twice test
           · max_tokens: required by the API — a couple hundred is
             plenty for short answers
         - pull the answer out: response.content is a LIST of blocks —
