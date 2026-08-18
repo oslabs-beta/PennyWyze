@@ -32,7 +32,9 @@ const fakeModels:FakeModel[] = [
 export const printReport = (models: FakeModel[]) => {
   const pass = chalk.green("PASS")
   const fail = chalk.red("FAIL")
-  const table = new Table({head: ["MODEL", "ACCURACY", "COST / MONTH"]})
+  const table = new Table({head: ["MODEL", "ACCURACY", "COST / MONTH"],
+    style: { head: ["cyan"] }
+  })
 
 
   for ( let i = 0; i < models.length; i++) {
