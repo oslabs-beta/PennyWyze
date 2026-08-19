@@ -6,6 +6,7 @@ type ModelSummary =  {
   score: string;
   monthlyCost: number;
   passed: boolean;
+  misses:{ input:string; answer:string; expected:string}[];
 } 
 
 
