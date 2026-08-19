@@ -1,5 +1,5 @@
 //the shape every model-caller must fit — lets the fake and real providers swap without anything else changing
-interface ModelProvider {
+export interface ModelProvider {
     run(
         modelId: string,
         systemPrompt: string,

@@ -55,7 +55,7 @@ export const printReport = (models: FakeModel[]) => {
   // TODO: mostExpensive assumes array order (Opus first), fine with hardcoded
   // data, revisit once wired to real, order-independent results
   const mostExpensive = models[0]
-  const savings = mostExpensive.monthlyCost - cheapest.monthlyCost
+  const savings = mostExpensive!.monthlyCost - cheapest.monthlyCost
 
   console.log(table.toString())
   console.log(`VERDICT  Switch to ${cheapest.name}, same accuracy, save ~$${savings}/mo.`);
