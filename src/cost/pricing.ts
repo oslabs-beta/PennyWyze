@@ -1,42 +1,33 @@
 /*
     THE PRICE LIST — pricing.ts
-    The six known prices (3 models × what each charges for input and
-    output tokens), written down in ONE labeled spot. This is data,
-    not machinery — a lookup chart the calculator consults.
 
+    Source: Anthropic's official pricing page.
+    Date checked: August 16, 2026
 
-    We Build ...
-        1. The PRICING lookup — each model ID mapped to its input rate
-           and output rate, in dollars per MILLION tokens
+    Sonnet's intro pricing ($2/$10) ends August 31, 2026, then becomes
+    $3/$15. This file needs a real update after that date, not before.
 
-    What it Powers ...
-        - Every dollar figure the tool ever prints starts as a lookup
-          here: the calculator reads these rates against each call's
-          token counts
-        - One spot means price changes are a one-line edit instead of
-          a hunt through the code — and prices DO change (Sonnet's
-          intro pricing literally ends 9 days after our demo)
-
-
-    Build No. 1 — the PRICING lookup
-        - three entries, keyed by the exact model IDs from the
-          verify-reality note
-        - each entry: { in: <rate>, out: <rate> } — output rates are
-          higher (generating costs more than reading)
-        - a comment block noting: the source (Anthropic's pricing
-          page), the date checked, and that Sonnet's intro pricing
-          ends Aug 31
-
-
-    Tech ...
-        none — a plain exported object
-
-
-    Gotchas ...
-        - Rates are per MILLION tokens — the ÷ 1,000,000 happens in
-          the calculator, not here. These are the raw published rates.
-        - This is not a visual table — nothing here prints. The
-          report's on-screen table is a different thing entirely.
-        - When prices change, update the date-checked comment too —
-          it's what makes these numbers trustworthy months later.
+    Note: Opus 5 runs "adaptive thinking" by default, and thinking
+    tokens bill at the output rate. Our live test showed 0 thinking
+    tokens for this project's simple classification task, so it's not
+    adding real cost right now, but worth knowing if costs ever look
+    higher than expected later.
 */
+
+type ModelPricing = {
+  in: number;
+  out: number
+}
+
+type ClaudePricing = {
+  haiku: ModelPricing;
+  opus: ModelPricing;
+  sonnet: ModelPricing
+}
+
+export const claudePricing = {
+  "haiku": { in: 1, out: 5 },
+  "opus":{ in: 5, out: 25 },
+  "sonnet": { in: 2, out: 10 }
+}
+
