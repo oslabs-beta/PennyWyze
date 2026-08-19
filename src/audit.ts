@@ -5,12 +5,13 @@ export type AuditResult = {
   modelId: string;
   question: string;
   answer: string;
+  expected: string;
   pass: boolean
   inputTokens: number;
   outputTokens:number;
 }
 
-
+//provider arrives as a parameter — whoever calls chooses fake or real
 export const runAudit = async (
   provider: ModelProvider, 
   dataset: GoldenExample[], 
@@ -31,6 +32,7 @@ export const runAudit = async (
         modelId,
         question: example.input,
         answer: response.text,
+        expected: example.expected,
         pass: passed,
         inputTokens: response.inputTokens,
         outputTokens: response.outputTokens
