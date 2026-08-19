@@ -1,56 +1,32 @@
-/*
-    THE REAL CALLER — anthropic-provider.ts
-    The provider that actually contacts Anthropic: same contract shape
-    as the FakeProvider, but run() makes a real API call and returns
-    real Claude's answer with real token counts. (Built in Milestone 2.)
+import type { ModelProvider } from './provider.js'
+import Anthropic from '@anthropic-ai/sdk'
 
+// created once and shared by every call — reads ANTHROPIC_API_KEY from the
+// environment on its own; maxRetries handles rate-limit hiccups with growing waits
+const client = new Anthropic({ maxRetries: 4 })
 
-    We Build ...
-        1. The AnthropicProvider — a run() matching the contract, using
-           the Anthropic SDK to make the call and plucking the answer
-           + token counts out of the reply
+export const anthropicProvider: ModelProvider = {
+  async run(modelId, systemPrompt, userInput){
+    const response = await client.messages.create({
+      model: modelId,
+      // system is a TOP-LEVEL field on Anthropic's API, not a message role
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userInput}],
+      //required by the API — generous ceiling for one-word answers
+      max_tokens: 300
+      //no temperature: the Claude 5 models reject the parameter (400 error);
+      //haiku is left at default for consistency across all three tiers.
+      //repeatability is proven by the M3 verdict-stability run instead.
+    })
 
-    What it Powers ...
-        - Truth: the moment this swaps in for the fake, every answer,
-          score, and dollar figure becomes real. The tool starts
-          telling the truth here.
-        - Each call costs a fraction of a cent on the user's own key
-          and takes a couple of seconds — this file is where the
-          audit's runtime and its cost both live.
+    //content is a list of typed blocks — grab property then confirm it's text before reading .text
+    const responseText = response.content[0]
+    const text: string = responseText?.type === 'text' ? responseText.text : ''
 
-
-    Build No. 1 — the AnthropicProvider
-        - create the client once, with maxRetries: 4 — the SDK
-          automatically retries "slow down" (rate limit) errors with
-          growing waits; we configure, not hand-build
-        - each run(): call the SDK's message-create with:
-          · model: the modelId passed in
-          · system: the systemPrompt — a TOP-LEVEL field, not inside
-            the messages (gotcha coming from OpenAI)
-          · messages: one user message holding userInput
-          · temperature: 0 — ONLY on models that accept it; two dropped 
-            the setting (see the verify-reality note for which). Repeatability 
-            is proven either way by M3's run-the-audit-twice test
-          · max_tokens: required by the API — a couple hundred is
-            plenty for short answers
-        - pull the answer out: response.content is a LIST of blocks —
-          find the text block, return its text
-        - token counts come straight off response.usage — pass them
-          through as inputTokens / outputTokens
-
-
-    Tech ...
-        @anthropic-ai/sdk (installed) → import Anthropic from "@anthropic-ai/sdk"
-        the key: the SDK auto-reads ANTHROPIC_API_KEY from the
-        environment — no key handling in our code, ever
-
-
-    Gotchas ...
-        - This is the ONLY file in the project that touches the
-          Anthropic SDK — everything else talks to "a provider."
-        - If a call still fails after all retries: record that question
-          as errored and KEEP GOING — one bad call must never crash
-          the whole audit at question 37 of 150.
-        - The prompt goes in the system field, not the messages —
-          and max_tokens is not optional.
-*/
+    return {
+      text,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens
+    }
+  }
+}
