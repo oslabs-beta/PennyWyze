@@ -1,8 +1,14 @@
 import { Command } from "commander"
+import { loadGoldenDataset } from "./golden-dataset/load-golden-dataset.js";
+import { runAudit } from "./audit.js";
+import { fakeProvider } from "./providers/fake-provider.js";
+import { printReport } from "./report.js";
 
+import { readFileSync } from "fs";
 
 const program = new Command();
 
+const MODEL_IDS = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5-20251001']
 
 program.name('pennywyze');
 
@@ -13,12 +19,34 @@ program.command('audit')
   .requiredOption('--prompt <filepath>', 'path to your prompt file')
   .requiredOption('--dataset <filepath>', 'path to your golden dataset file')
   .option('--volume <message-count>', 'number of messages your AI feature handles per month', '100000')
-  .action((options)=>{
+  .action(async (options)=>{
     //convert volume from text into a number — everything typed in a terminal arrives as a string
     const volume = Number(options.volume);
     if(Number.isNaN(volume) || volume <= 0) return program.error('Volume must be a positive number');
-    //proof of life — temporary echo, replaced with the real pipeline calls at the wire-up ticket
-    console.log(options);
+    
+    const prompt = readFileSync(options.prompt, 'utf8')
+    const dataset = loadGoldenDataset(options.dataset);
+    const results = await runAudit(fakeProvider, dataset, prompt, MODEL_IDS)
+
+    // SUMMARIZE — the bridge between the loop and the report.
+    // runAudit returned 15 records (3 models × 5 questions, one per call),
+    // but printReport wants 3 rows — one per MODEL: name, score, cost, passed.
+    // For each model: grab its 5 records → count its passes → build its row.
+    // monthlyCost is hardcoded 0 tonight — real money math is a Milestone 2 ticket.
+    // passed = passed EVERYTHING (100% bar for now).
+    const summaries = MODEL_IDS.map(modelId => {
+      const records = results.filter(r => r.modelId === modelId)
+      const passes = records.filter(r => r.pass).length
+      return {
+        name: modelId,
+        score: `${passes}/${records.length}`,
+        monthlyCost: 0,
+        passed: passes === records.length
+      }
+    })
+
+    printReport(summaries)
+
   });
 
 //everything above only describes the command — parse reads what was typed and acts on it
