@@ -1,7 +1,7 @@
 import Table from "cli-table3"
 import chalk from "chalk"
 
-type Model =  {
+type ModelSummary =  {
   name: string;
   score: string;
   monthlyCost: number;
@@ -9,7 +9,7 @@ type Model =  {
 } 
 
 
-export const printReport = (models: FakeModel[]) => {
+export const printReport = (models: ModelSummary[]) => {
   const pass = chalk.green("PASS")
   const fail = chalk.red("FAIL")
   const table = new Table({head: ["MODEL", "ACCURACY", "COST / MONTH"],
