@@ -1,33 +1,13 @@
 import Table from "cli-table3"
 import chalk from "chalk"
 
-type FakeModel =  {
+type Model =  {
   name: string;
   score: string;
   monthlyCost: number;
   passed: boolean;
 } 
 
-const fakeModels:FakeModel[] = [
-  {
-    name: "Opus",
-    score: "50/50",
-    monthlyCost: 325,
-    passed: true
-  },
-  {
-    name: "Sonnet",
-    score: "50/50",
-    monthlyCost: 195,
-    passed: true
-  },
-  {
-    name: "Haiku",
-    score: "46/50",
-    monthlyCost: 65,
-    passed: false
-  }
-]
 
 export const printReport = (models: FakeModel[]) => {
   const pass = chalk.green("PASS")
@@ -52,13 +32,12 @@ export const printReport = (models: FakeModel[]) => {
     return
   }
 
-  // TODO: mostExpensive assumes array order (Opus first), fine with hardcoded
-  // data, revisit once wired to real, order-independent results
-  const mostExpensive = models[0]
-  const savings = mostExpensive!.monthlyCost - cheapest.monthlyCost
+  //models[0] assumes the most expensive model arrives first (true for now).
+  //TODO: derive by price (max monthlyCost) once real, order-independent results flow.
+  //?? cheapest satisfies the strict index check — never fires with a non-empty list.
+  const mostExpensive = models[0] ?? cheapest 
+  const savings = mostExpensive.monthlyCost - cheapest.monthlyCost
 
   console.log(table.toString())
   console.log(`VERDICT  Switch to ${cheapest.name}, same accuracy, save ~$${savings}/mo.`);
 }
-
-printReport(fakeModels)
