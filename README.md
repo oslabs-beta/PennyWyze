@@ -20,3 +20,6 @@ once — a single missing comma breaks the whole file with no location
 given. JSONL parses line-by-line, which is what lets PennyWyze report
 "line 3 is invalid" instead of "something's wrong somewhere." Have
 regular JSON? Convert first — each array entry becomes its own line.
+
+**Evaluation Rules**
+Evaluation runs default to requiring a 100% score to pass, though users can customize this threshold using the --pass-rate flag. To pass a test item, a model's cleaned output must exactly equal the expected label rather than merely containing it.
