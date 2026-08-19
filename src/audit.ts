@@ -58,3 +58,11 @@
           what makes the measured per-call costs true.
 */
 
+type AuditResult = {
+  modelId: string;
+  question: string;
+  answer: string;
+  pass: boolean
+  inputTokens: number;
+  outputTokens:number;
+}
