@@ -44,20 +44,6 @@ export const printReport = (models: ModelSummary[]) => {
     table.push([ models[i]?.name, `${models[i]?.score} ${accuracy}`, `$${models[i]?.monthlyCost} / mo`])
   }
 
-  const passed = models.filter(model => model.passed)
-  const cheapest = passed.sort((a,b) => a.monthlyCost - b.monthlyCost)[0]
-
-  if (!cheapest) {
-    console.log(table.toString())
-    console.log("No cheaper model meets quality - youre not overpaying.")
-    return
-  }
-
-  // TODO: mostExpensive assumes array order (Opus first), fine with hardcoded
-  // data, revisit once wired to real, order-independent results
-  const mostExpensive = models[0]
-  const savings = mostExpensive!.monthlyCost - cheapest.monthlyCost
-
   console.log(table.toString())
 
   for (const model of models) {
@@ -70,5 +56,19 @@ export const printReport = (models: ModelSummary[]) => {
       }
     }
   }
+
+  const passed = models.filter(model => model.passed)
+  const cheapest = passed.sort((a,b) => a.monthlyCost - b.monthlyCost)[0]
+
+  if (!cheapest) {
+    console.log("No cheaper model meets quality - youre not overpaying.")
+    return
+  }
+
+  // TODO: mostExpensive assumes array order (Opus first), fine with hardcoded
+  // data, revisit once wired to real, order-independent results
+  const mostExpensive = models[0]
+  const savings = mostExpensive!.monthlyCost - cheapest.monthlyCost
+
   console.log(`VERDICT  Switch to ${cheapest.name}, same accuracy, save ~$${savings}/mo.`);
 }
