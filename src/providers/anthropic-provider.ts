@@ -19,9 +19,10 @@ export const anthropicProvider: ModelProvider = {
       //repeatability is proven by the M3 verdict-stability run instead.
     })
 
-    //content is a list of typed blocks — grab property then confirm it's text before reading .text
-    const responseText = response.content[0]
-    const text: string = responseText?.type === 'text' ? responseText.text : ''
+    // Search for the text block instead of assuming it's at index 0 —
+    // Opus's adaptive thinking can insert a 'thinking' block first
+    const textBlock = response.content.find((block) => block.type === "text");
+    const text: string = textBlock?.type === "text" ? textBlock.text : "";
 
     return {
       text,
