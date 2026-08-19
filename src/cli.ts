@@ -3,8 +3,8 @@ import { loadGoldenDataset } from "./golden-dataset/load-golden-dataset.js";
 import { runAudit } from "./audit.js";
 import { fakeProvider } from "./providers/fake-provider.js";
 import { printReport } from "./report.js";
-
 import { readFileSync } from "fs";
+import { anthropicProvider } from './providers/anthropic-provider.js'
 
 const program = new Command();
 
@@ -19,6 +19,7 @@ program.command('audit')
   .requiredOption('--prompt <filepath>', 'path to your prompt file')
   .requiredOption('--dataset <filepath>', 'path to your golden dataset file')
   .option('--volume <message-count>', 'number of messages your AI feature handles per month', '100000')
+  .option('--fake', 'use the FakeProvider instead if calling the real API')
   .action(async (options)=>{
     //convert volume from text into a number — everything typed in a terminal arrives as a string
     const volume = Number(options.volume);
@@ -26,7 +27,10 @@ program.command('audit')
     
     const prompt = readFileSync(options.prompt, 'utf8')
     const dataset = loadGoldenDataset(options.dataset);
-    const results = await runAudit(fakeProvider, dataset, prompt, MODEL_IDS)
+
+    const provider = options.fake ? fakeProvider : anthropicProvider
+
+    const results = await runAudit(provider, dataset, prompt, MODEL_IDS)
 
     // SUMMARIZE — the bridge between the loop and the report.
     // runAudit returned 15 records (3 models × 5 questions, one per call),
