@@ -45,7 +45,7 @@ program.command('audit')
 
       const misses = records
         .filter(r => !r.pass)
-        .map(r => ({ input: r.question, answer: r.answer, expected: r?.expected }))
+        .map(r => ({ input: r.question, answer: r.answer, expected: r.expected }))
         
       return {
         name: modelId,
@@ -69,10 +69,7 @@ program.command('audit')
           appendFileSync(`${fixturesDir}/real-misses.jsonl`, lines)
       }
     }
-
-
     printReport(summaries)
-
   });
 
 //everything above only describes the command — parse reads what was typed and acts on it
