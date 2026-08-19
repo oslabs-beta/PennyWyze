@@ -45,10 +45,7 @@ program.command('audit')
 
       const misses = records
         .filter(r => !r.pass)
-        .map(r => {
-          const example = dataset.find(ex => ex.input === r.question)
-          return { input: r.question, answer: r.answer, expected: example?.expected ?? "" }
-        })
+        .map(r => ({ input: r.question, answer: r.answer, expected: r?.expected }))
         
       return {
         name: modelId,

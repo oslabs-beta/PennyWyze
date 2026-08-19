@@ -5,7 +5,8 @@ export type AuditResult = {
   modelId: string;
   question: string;
   answer: string;
-  pass: boolean
+  expected: string;
+  pass: boolean;
   inputTokens: number;
   outputTokens:number;
 }
@@ -31,6 +32,7 @@ export const runAudit = async (
         modelId,
         question: example.input,
         answer: response.text,
+        expected: example.expected,
         pass: passed,
         inputTokens: response.inputTokens,
         outputTokens: response.outputTokens
