@@ -25,7 +25,7 @@ program.command('audit')
     if(Number.isNaN(volume) || volume <= 0) return program.error('Volume must be a positive number');
     
     const prompt = readFileSync(options.prompt, 'utf8')
-    const dataset = loadGoldenDataset(options.dataset);
+    const dataset = await loadGoldenDataset(options.dataset);
     const results = await runAudit(fakeProvider, dataset, prompt, MODEL_IDS)
 
     // SUMMARIZE — the bridge between the loop and the report.
