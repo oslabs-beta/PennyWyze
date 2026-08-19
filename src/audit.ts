@@ -19,14 +19,12 @@ export const runAudit = async (
 ): Promise<AuditResult[]> => {
   const results: AuditResult[] = []
 
-  // Loop through the model IDS
-    // Inner loop through the dataset of each example
-      // call the provider with modelid, prompt, example
-      // Push the results
   for(const modelId of modelIds){
     for(const example of dataset){
       const response = await provider.run(modelId, prompt, example.input);
 
+      //naive check on purpose — real grading is Milestone 2; it wrongly
+      //failing the fake's quoted answer is expected, don't fix here
       const passed = response.text === example.expected;
 
       const result: AuditResult = {
@@ -37,7 +35,6 @@ export const runAudit = async (
         inputTokens: response.inputTokens,
         outputTokens: response.outputTokens
       }
-
       results.push(result)
     }
   }
