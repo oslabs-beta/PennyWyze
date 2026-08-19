@@ -23,9 +23,9 @@ const fakeModels:FakeModel[] = [
   },
   {
     name: "Haiku",
-    score: "50/50",
+    score: "46/50",
     monthlyCost: 65,
-    passed: true
+    passed: false
   }
 ]
 
@@ -45,6 +45,15 @@ export const printReport = (models: FakeModel[]) => {
 
   const passed = models.filter(model => model.passed)
   const cheapest = passed.sort((a,b) => a.monthlyCost - b.monthlyCost)[0]
+
+  if (!cheapest) {
+    console.log(table.toString())
+    console.log("No cheaper model meets quality - youre not overpaying.")
+    return
+  }
+
+  // TODO: mostExpensive assumes array order (Opus first), fine with hardcoded
+  // data, revisit once wired to real, order-independent results
   const mostExpensive = models[0]
   const savings = mostExpensive.monthlyCost - cheapest.monthlyCost
 
