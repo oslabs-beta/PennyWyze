@@ -1,3 +1,4 @@
+import "dotenv/config"
 import { Command } from "commander"
 import { loadGoldenDataset } from "./golden-dataset/load-golden-dataset.js";
 import { runAudit } from "./audit.js";
