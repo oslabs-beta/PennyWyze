@@ -36,7 +36,7 @@ program.command('audit')
 
     const provider = options.fake ? fakeProvider : anthropicProvider
 
-    // passRate travels into the loop — early stopping needs it for its
+    // passBar (as a fraction) travels into the loop — early stopping needs it for its can-this-model-still-recover math.
     // can-this-model-still-recover math
     const results = await runAudit(provider, dataset, prompt, MODEL_IDS, passBar)
 
