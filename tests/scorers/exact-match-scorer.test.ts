@@ -18,6 +18,10 @@ describe("exactMatchScorer", () => {
     expect(await exactMatchScorer.score("```json\nbilling\n```", "billing")).toBe(true);
   });
 
+  it("passes quotes and a trailing period together", async () => {
+    expect(await exactMatchScorer.score('"billing".', "billing")).toBe(true);
+  });
+  
   it("fails a sentence-wrapped answer, on purpose", async () => {
     expect(await exactMatchScorer.score("The answer is billing.", "billing")).toBe(false);
   });

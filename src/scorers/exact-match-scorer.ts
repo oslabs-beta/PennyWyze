@@ -6,8 +6,8 @@ const normalize = (text:string):string => {
     .replace(/```[a-z]*\n?/g, "")
     .replace(/```/g, "")
     .trim()
-  s = s.replace(/^["']|["']$/g, "")
-  return s.toLowerCase().replace(/[.!]+$/, "")
+  s = s.toLowerCase().replace(/[.!]+$/, "");
+  return s.replace(/^["']|["']$/g, "");
 }
 
 export const exactMatchScorer: Scorer = {
