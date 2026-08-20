@@ -14,6 +14,25 @@ import { costOfCall } from './cost/calculator.js';
 const program = new Command();
 const MODEL_IDS = Object.values(ANTHROPIC_MODELS).map(model => model.id);
 
+//Load prompt file and strip invisible control characters & BOM markers
+const loadAndSanitizePrompt = (filePath: string): string => {
+  if (!existsSync(filePath)) {
+    throw new Error(`Prompt file not found: '${filePath}'`);
+  }
+
+  const raw = readFileSync(filePath, 'utf8')
+
+  // Strip UTF-8 BOM (\uFEFF) and zero-width spaces/joiners (\u200B-\u200D)
+  const sanitized = raw
+    .replace(/^\uFEFF/, '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '');
+
+  if (!sanitized.trim()) {
+    throw new Error(`Prompt file '${filePath}' contains no readable text.`);
+  }
+
+  return sanitized;
+}
 //Helper: Calculate total execution cost for a set of audit results
 const calculateResultsCost = (results: AuditResult[]): number => {
   return results.reduce((sum, result) => {
@@ -91,7 +110,8 @@ program
 
     try {
       // Prompt & dataset loaders throw descriptive errors for missing files, empty files, or invalid JSON lines
-      prompt = readFileSync(options.prompt, 'utf8');
+      // Load prompt and dataset cleanly with file existence, non-empty, and sanitization checks
+      prompt = loadAndSanitizePrompt(options.prompt);
       dataset = loadGoldenDataset(options.dataset);
     } catch (err:any) {
       // Intercept errors and print clean CLI messages without leaking Node stack traces
