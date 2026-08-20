@@ -73,14 +73,6 @@ program
   )
   .action(async options => {
     //Validate CLI input arguments
-    // Catch missing prompt or dataset files cleanly before attempting to read them
-    if (!existsSync(options.prompt)) {
-      return program.error(`Error: Prompt file '${options.prompt}' doesn not exsist. `)
-    }
-
-    if (!existsSync(options.dataset)) {
-      return program.error(`Error: Dataset file '${options.dataset}' does not exsist.`)
-    }
     //Convert flags from text into numbers - everything typed in a terminal arrives as a string
     const volume = Number(options.volume);
     if (Number.isNaN(volume) || volume <= 0){
@@ -93,11 +85,20 @@ program
     }
     const passBar = passRate / 100;
 
-    //Load dataset and provider
-    const prompt = readFileSync(options.prompt, 'utf8');
-    const dataset = loadGoldenDataset(options.dataset);
-    const provider = options.fake ? fakeProvider : anthropicProvider;
+    // Load dataset and provider cleanly inside an error-handling boundary
+    let prompt: string
+    let dataset: ReturnType<typeof loadGoldenDataset>
 
+    try {
+      // Prompt & dataset loaders throw descriptive errors for missing files, empty files, or invalid JSON lines
+      prompt = readFileSync(options.prompt, 'utf8');
+      dataset = loadGoldenDataset(options.dataset);
+    } catch (err:any) {
+      // Intercept errors and print clean CLI messages without leaking Node stack traces
+      return program.error(`Error: ${err.message}`)
+    }
+    
+    const provider = options.fake ? fakeProvider : anthropicProvider;
 
     // Execute audit loop
     const results = await runAudit(
