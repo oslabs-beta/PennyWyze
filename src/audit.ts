@@ -21,8 +21,8 @@ const getTierName = (modelId: string):string => {
 
 // Helper: Draw live progress bar ticker (Capped width to prevent terminal wrapping)
 const renderProgress = (tier: string, current: number, total:number, barWidth = 20) => {
-  const precentage = Math.min(1, Math.max(0, current / total))
-  const filledLength = Math.round(barWidth * precentage)
+  const percentage = Math.min(1, Math.max(0, current / total))
+  const filledLength = Math.round(barWidth * percentage)
   const emptyLength = barWidth - filledLength
 
   const bar = '█'.repeat(filledLength) + chalk.dim('░'.repeat(emptyLength))
