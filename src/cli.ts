@@ -140,7 +140,7 @@ program
         writeFileSync(filePath, allLines.join('\n') + '\n');
       }
     }
-    printReport(summaries, auditCost);
+    printReport(summaries, auditCost, dataset.length);
   });
 
 //everything above only describes the command — parse reads what was typed and acts on it

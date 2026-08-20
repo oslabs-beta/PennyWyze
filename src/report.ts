@@ -9,7 +9,7 @@ type ModelSummary = {
   misses: { input: string; answer: string; expected: string }[];
 };
 
-export const printReport = (models: ModelSummary[], auditCost: number) => {
+export const printReport = (models: ModelSummary[], auditCost: number, datasetSize: number) => {
   const pass = chalk.green('PASS');
   const fail = chalk.red('FAIL');
   const table = new Table({
@@ -44,7 +44,10 @@ export const printReport = (models: ModelSummary[], auditCost: number) => {
   const cheapest = passed.sort((a, b) => a.monthlyCost - b.monthlyCost)[0];
 
   if (!cheapest) {
-    console.log('No cheaper model meets quality - youre not overpaying.');
+    console.log('No cheaper model meets quality - youre not overpaying.')
+    if (datasetSize < 30) {
+      console.log(chalk.yellow(`Note: only ${datasetSize} examples tested, verdicts are more reliable with 30+.`))
+    }
     return;
   }
 
