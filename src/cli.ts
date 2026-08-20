@@ -38,9 +38,6 @@ program
     const prompt = readFileSync(options.prompt, 'utf8')
     const dataset = loadGoldenDataset(options.dataset);
 
-    const prompt = readFileSync(options.prompt, 'utf8');
-    const dataset = loadGoldenDataset(options.dataset);
-
     const provider = options.fake ? fakeProvider : anthropicProvider;
     // passBar (as a fraction) travels into the loop — early stopping needs it for its can-this-model-still-recover math.
     // can-this-model-still-recover math
