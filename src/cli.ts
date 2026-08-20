@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { Command } from 'commander';
+import chalk from 'chalk';
 import { loadGoldenDataset } from './golden-dataset/load-golden-dataset.js';
 import { runAudit } from './audit.js';
 import { fakeProvider } from './providers/fake-provider.js';
@@ -65,6 +66,11 @@ program
     const summaries = MODEL_IDS.map(modelId => {
       const records = results.filter(r => r.modelId === modelId);
       const passes = records.filter(r => r.pass).length;
+      const isEarlyStopped = records.length < dataset.length
+
+      const score = isEarlyStopped
+        ? `${passes}/${dataset.length} ${chalk.dim('(stopped)')}`
+        : `${passes}/${dataset.length}`
 
       const model = Object.values(ANTHROPIC_MODELS).find(
         model => model.id === modelId,
@@ -95,7 +101,7 @@ program
 
       return {
         name: modelId,
-        score: `${passes}/${records.length}`,
+        score,
         monthlyCost,
         passed: passes / records.length >= passBar,
         misses,
