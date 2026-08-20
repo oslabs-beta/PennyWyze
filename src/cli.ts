@@ -10,6 +10,7 @@ import { fakeProvider } from './providers/fake-provider.js';
 import { anthropicProvider } from './providers/anthropic-provider.js';
 import { ANTHROPIC_MODELS } from './providers/anthropic-models.js';
 import { costOfCall } from './cost/calculator.js';
+import { exactMatchScorer } from './scorers/exact-match-scorer.js';
 
 const program = new Command();
 const MODEL_IDS = Object.values(ANTHROPIC_MODELS).map(model => model.id);
@@ -145,6 +146,7 @@ program
         prompt,
         MODEL_IDS,
         passBar, // passBar (as a fraction) travels into the loop — early stopping needs it for its can-this-model-still-recover math.
+        exactMatchScorer,
       );
     } catch (err: any) {
       restoreCursor(); // Ensure cursor is back before exiting
