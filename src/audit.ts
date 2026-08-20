@@ -60,7 +60,7 @@ export const runAudit = async (
 
       //stop once this model mathematically can't reach the pass bar —
       //e.g. 50 questions at 90% allows 5 misses; break on the 6th
-      const allowedFailures = Math.floor(dataset.length * (1 - passBar / 100))
+      const allowedFailures = Math.floor(dataset.length * (1 - passBar))
       if (failures > allowedFailures) break   
     }
 
