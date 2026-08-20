@@ -1,9 +1,10 @@
+import "dotenv/config"
 import { Command } from "commander"
 import { loadGoldenDataset } from "./golden-dataset/load-golden-dataset.js";
 import { runAudit } from "./audit.js";
 import { fakeProvider } from "./providers/fake-provider.js";
 import { printReport } from "./report.js";
-import { readFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { anthropicProvider } from './providers/anthropic-provider.js'
 
 const program = new Command();
@@ -44,7 +45,7 @@ program.command('audit')
 
       const misses = records
         .filter(r => !r.pass)
-        .map(r => ({ input: r.question, answer: r.answer, expected: r?.expected }))
+        .map(r => ({ input: r.question, answer: r.answer, expected: r.expected }))
         
       return {
         name: modelId,
@@ -55,8 +56,26 @@ program.command('audit')
       }
     })
 
-    printReport(summaries)
+    if (!options.fake) {
+      const misses = results.filter((r) => !r.pass)
+      if (misses.length > 0) {
+        const fixturesDir = "tests/scorers/fixtures"
+        if (!existsSync(fixturesDir)) mkdirSync(fixturesDir, { recursive: true})
+        
+          const filePath = `${fixturesDir}/real-misses.jsonl`;
 
+
+          const existingLines = existsSync(filePath)
+            ? readFileSync(filePath, "utf8").trim().split("\n").filter(Boolean)
+            : []
+          
+          const newLines = misses.map((m) => JSON.stringify({ answer: m.answer, expected: m.expected}))
+          const allLines = [...new Set([...existingLines, ...newLines])]
+
+          writeFileSync(filePath, allLines.join("\n") + "\n")
+      }
+    }
+    printReport(summaries)
   });
 
 //everything above only describes the command — parse reads what was typed and acts on it
