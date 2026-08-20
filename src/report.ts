@@ -48,6 +48,7 @@ export const printReport = (models: ModelSummary[], auditCost: number, datasetSi
     if (datasetSize < 30) {
       console.log(chalk.yellow(`Note: only ${datasetSize} examples tested, verdicts are more reliable with 30+.`))
     }
+    console.log(`This audit cost $${auditCost.toFixed(2)}.`);
     return;
   }
 
