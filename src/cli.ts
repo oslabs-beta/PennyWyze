@@ -73,15 +73,23 @@ program
   )
   .action(async options => {
     //Validate CLI input arguments
+    // Catch missing prompt or dataset files cleanly before attempting to read them
+    if (!existsSync(options.prompt)) {
+      return program.error(`Error: Prompt file '${options.prompt}' doesn not exsist. `)
+    }
+
+    if (!existsSync(options.dataset)) {
+      return program.error(`Error: Dataset file '${options.dataset}' does not exsist.`)
+    }
     //Convert flags from text into numbers - everything typed in a terminal arrives as a string
     const volume = Number(options.volume);
     if (Number.isNaN(volume) || volume <= 0){
-      return program.error('Volume must be a positive number');
+      return program.error('Error: Volume must be a positive number.');
     }
 
     const passRate = Number(options.passRate);
     if (Number.isNaN(passRate) || passRate < 1 || passRate > 100){
-      return program.error('Pass rate must be a number between 1 and 100');
+      return program.error('Error: Pass rate must be a number between 1 and 100.');
     }
     const passBar = passRate / 100;
 
