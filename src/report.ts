@@ -60,5 +60,8 @@ export const printReport = (models: ModelSummary[], auditCost: number, datasetSi
   console.log(
     `VERDICT  Switch to ${cheapest.name}, same accuracy, save ~$${savings.toFixed(2)}/mo.`,
   );
+  if (datasetSize < 30) {
+    console.log(chalk.yellow(`Note: only ${datasetSize} examples tested, verdicts are more reliable with 30+.`))
+  }
   console.log(`This audit cost $${auditCost.toFixed(2)}.`);
 };
