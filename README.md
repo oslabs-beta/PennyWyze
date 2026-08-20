@@ -5,36 +5,63 @@
 PennyWyze audits which Claude tier — Opus, Sonnet, or Haiku — is the cheapest
 one that still passes YOUR quality checks. Point it at your prompt and a golden
 dataset of real examples with known-correct answers; it runs every example
-against all three tiers, grades each answer, and prints a verdict: the cheapest
-passing model and what switching saves you.
+against all three tiers, grades each answer, and prints a report: each model's
+score, its projected monthly cost at your volume, what the audit itself cost,
+and a verdict naming the cheapest passing model and what switching saves you.
 
-## How it works
+## Install & Setup
 
-Every model takes the same exam — your actual prompt, your actual examples,
-one API call per question, exactly the way your production feature runs. Each
-answer is graded against your expected value, every call's token counts are
-recorded, and the report names the cheapest model that met your bar.
+Requires Node 18+.
+
+```bash
+git clone https://github.com/oslabs-beta/PennyWyze.git
+cd PennyWyze
+npm install
+```
+
+PennyWyze runs on your own Anthropic API key — nothing is uploaded anywhere.
+Create a `.env` file at the project root:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Already using Anthropic? You're done. (No key yet? Add `--fake` to any command
+to run the whole pipeline on a built-in fake provider — free and instant.)
+
+## Run an audit
+
+```bash
+npm run dev -- audit --prompt examples/prompt.md --dataset examples/golden-dataset.jsonl
+```
+
+(The lone `--` separates npm's flags from PennyWyze's.) Output:
 
 ```
  ✓ opus audited — 5 questions
  ✓ sonnet audited — 5 questions
- ✗ haiku failed — stopped at question 2
+ ✓ haiku audited — 5 questions
 
-┌────────┬────────────┬──────────────┐
-│ MODEL  │ ACCURACY   │ COST / MONTH │
-├────────┼────────────┼──────────────┤
-│ Opus   │ 5/5 PASS   │ ...          │
-│ Sonnet │ 5/5 PASS   │ ...          │
-│ Haiku  │ 1/2 FAIL   │ ...          │
-└────────┴────────────┴──────────────┘
-VERDICT  Switch to Sonnet, same accuracy...
+┌───────────────────────────┬──────────┬──────────────┐
+│ MODEL                     │ ACCURACY │ COST / MONTH │
+├───────────────────────────┼──────────┼──────────────┤
+│ claude-opus-5             │ 5/5 PASS │ $178.50 / mo │
+├───────────────────────────┼──────────┼──────────────┤
+│ claude-sonnet-5           │ 5/5 PASS │ $71.40 / mo  │
+├───────────────────────────┼──────────┼──────────────┤
+│ claude-haiku-4-5-20251001 │ 5/5 PASS │ $25.90 / mo  │
+└───────────────────────────┴──────────┴──────────────┘
+VERDICT  Switch to claude-haiku-4-5, same accuracy, save ~$152/mo.
+
+Note: only 5 examples tested, verdicts are more reliable with 30+
+This audit made 15 calls and cost $0.04
 ```
 
-## Usage
+Each model runs your real prompt against your real examples, one API call per
+question — a live progress bar shows the audit working. Models that can't
+reach the pass bar stop early, so failed tiers don't keep spending your money.
 
-```bash
-pennywyze audit --prompt ./your-prompt.md --dataset ./your-dataset.jsonl
-```
+### Flags
 
 | Flag | Required | Default | What it does |
 |---|---|---|---|
@@ -42,28 +69,36 @@ pennywyze audit --prompt ./your-prompt.md --dataset ./your-dataset.jsonl
 | `--dataset <filepath>` | yes | — | your golden dataset (format below) |
 | `--volume <count>` | no | 100000 | your messages per month — scales the cost projections, never the verdict |
 | `--pass-rate <percent>` | no | 100 | minimum score to count as passing (e.g. 90 = one miss in ten is fine) |
-| `--fake` | no | off | run against a built-in fake provider: no API key, no cost, instant — for development |
+| `--fake` | no | off | run against a built-in fake provider: no API key, no cost, instant |
 
-During development the tool runs via npm, and the lone `--` separates npm's
-flags from PennyWyze's:
+## Grading rules
 
-```bash
-npm run dev -- audit --prompt examples/prompt.md --dataset examples/golden-dataset.jsonl --fake
-```
+Answers are cleaned before comparison — surrounding quotes, code fences,
+capitalization, and trailing punctuation are stripped from both sides — then
+compared with strict equality: a model's cleaned output must exactly equal the
+expected label rather than merely containing it. A correct answer wearing
+decoration passes; a wrong answer never does.
 
-## Setup
+Strictness is a policy: an answer buried in a sentence ("The answer is
+billing") fails, because ignoring "reply with only the word" is a real
+compliance miss for a production task.
 
-PennyWyze uses your own Anthropic API key — nothing is uploaded anywhere.
-Put it in a `.env` file at the project root:
-
-```
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-Already using Anthropic? You're done. (No key? `--fake` mode runs the whole
-pipeline for free.)
+Evaluation defaults to requiring a 100% score to pass; `--pass-rate` loosens
+the bar.
 
 ## Golden Dataset Format
+
+**What a golden dataset is:** a small file of real examples from your AI
+feature, each paired with the answer you consider correct — real inputs your
+system actually receives, and the exact output you'd want back. It's the
+answer key PennyWyze grades every model against: your quality bar, written
+down.
+
+**Don't have one? Build it in ~20 minutes:** pull 20–30 real inputs from your
+logs (support tickets, user messages, whatever your feature processes), run
+each through your current setup or label it by hand, and keep only the ones
+where you're confident what the right answer is. Real examples beat invented
+ones — invented inputs test the model on questions your users never ask.
 
 Golden dataset files use two fields:
 
@@ -87,34 +122,16 @@ given. JSONL parses line-by-line, which is what lets PennyWyze report
 regular JSON? Convert first — each array entry becomes its own line.
 
 Bad lines stop the audit immediately with the line number — no API money
-is ever spent on a broken dataset.
-
-## Grading
-
-Answers are cleaned before comparison — surrounding quotes, code fences,
-capitalization, and trailing punctuation are stripped from both sides —
-then compared with strict equality: a model's cleaned output must exactly
-equal the expected label rather than merely containing it. A correct
-answer wearing decoration passes; a wrong answer never does.
-
-Strictness is a policy: an answer buried in a sentence ("The answer is
-billing") fails, because ignoring "reply with only the word" is a real
-compliance miss for a production task.
-
-Evaluation defaults to requiring a 100% score to pass; `--pass-rate`
-loosens the bar.
-
-## Cost controls
-
-- **Early stopping:** a model that mathematically can't reach the pass bar
-  stops taking the exam — remaining calls are skipped, not billed.
-- **Live progress:** each model's run shows a live progress bar, so you always
-  know what the audit is doing with your money.
-- **`--fake` mode:** the entire pipeline runs at $0 for development and CI.
+is ever spent on a broken dataset. Verdicts get more trustworthy with more
+examples; under 30, the report says so.
 
 ## Status
 
-In active development (OSLabs). Working today: real audits against live Claude
-models, grading with cleanup, early stopping, configurable pass bar, misses
-reporting, free fake mode. In flight: real monthly cost projections in the
-table. npm package coming post-demo.
+Built at OSLabs. Working today: real audits against live Claude models,
+grading with cleanup, early stopping, configurable pass bar, live progress,
+misses reporting, real cost projections and audit self-cost, free fake mode.
+npm package coming soon.
+
+## License
+
+MIT
