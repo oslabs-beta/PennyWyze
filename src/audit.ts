@@ -54,11 +54,17 @@ export const runAudit = async (
         outputTokens: response.outputTokens
       }
       results.push(result)
+
+      //one miss = failed for good (100% bar) — remaining questions can't
+      //change the verdict, so stop spending money on this model
+      if (!passed) break
     }
 
-    // model finished — resolve the ticker into a permanent green line;
-    // the \n releases it so the next model's ticker starts fresh below
-    process.stdout.write(chalk.green(`\r ✓ ${tier} audited — ${dataset.length} questions      \n`))
+      if (questionCount === dataset.length) {
+        process.stdout.write(chalk.green(`\r ✓ ${tier} audited — ${dataset.length} questions      \n`))
+      } else {
+        process.stdout.write(chalk.red(`\r ✗ ${tier} failed — stopped at question ${questionCount}      \n`))
+      }
   }
 
   return results
