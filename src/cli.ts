@@ -4,7 +4,7 @@ import { loadGoldenDataset } from "./golden-dataset/load-golden-dataset.js";
 import { runAudit } from "./audit.js";
 import { fakeProvider } from "./providers/fake-provider.js";
 import { printReport } from "./report.js";
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { anthropicProvider } from './providers/anthropic-provider.js'
 
 const program = new Command();
@@ -62,11 +62,17 @@ program.command('audit')
         const fixturesDir = "tests/scorers/fixtures"
         if (!existsSync(fixturesDir)) mkdirSync(fixturesDir, { recursive: true})
         
-          const lines = misses
-            .map((m) => JSON.stringify({ answer: m.answer, expected: m.expected}))
-            .join("\n") + "\n"
+          const filePath = `${fixturesDir}/real-misses.jsonl`;
 
-          appendFileSync(`${fixturesDir}/real-misses.jsonl`, lines)
+
+          const existingLines = existsSync(filePath)
+            ? readFileSync(filePath, "utf8").trim().split("\n").filter(Boolean)
+            : []
+          
+          const newLines = misses.map((m) => JSON.stringify({ answer: m.answer, expected: m.expected}))
+          const allLines = [...new Set([...existingLines, ...newLines])]
+
+          writeFileSync(filePath, allLines.join("\n") + "\n")
       }
     }
     printReport(summaries)
