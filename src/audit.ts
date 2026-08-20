@@ -19,9 +19,13 @@ const getTierName = (modelId: string):string => {
   return 'haiku'
 }
 
-// Helper: Draw live progress bar ticker
-const renderProgress = (tier: string, current: number, total:number) => {
-  const bar = '█'.repeat(current) + chalk.dim('░'.repeat(total - current))
+// Helper: Draw live progress bar ticker (Capped width to prevent terminal wrapping)
+const renderProgress = (tier: string, current: number, total:number, barWidth = 20) => {
+  const precentage = Math.min(1, Math.max(0, current / total))
+  const filledLength = Math.round(barWidth * precentage)
+  const emptyLength = barWidth - filledLength
+
+  const bar = '█'.repeat(filledLength) + chalk.dim('░'.repeat(emptyLength))
   // \x1b[K clears from cursor to end of line, avoiding hardcoded spaces
   process.stdout.write(
     chalk.bold.cyan(`\r Auditing ▷ ${tier} ${bar} ${current}/${total}\x1b[K`),
