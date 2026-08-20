@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 
 // created once and shared by every call — reads ANTHROPIC_API_KEY from the
 // environment on its own; maxRetries handles rate-limit hiccups with growing waits
-const client = new Anthropic({ maxRetries: 4 })
+const client = new Anthropic({ maxRetries: 4, timeout: 20000 })
 
 export const anthropicProvider: ModelProvider = {
   async run(modelId, systemPrompt, userInput){
