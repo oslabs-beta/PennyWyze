@@ -6,6 +6,7 @@ type ModelSummary =  {
   score: string;
   monthlyCost: number;
   passed: boolean;
+  misses:{ input:string; answer:string; expected:string}[];
 } 
 
 
@@ -23,11 +24,23 @@ export const printReport = (models: ModelSummary[]) => {
     table.push([ models[i]?.name, `${models[i]?.score} ${accuracy}`, `$${models[i]?.monthlyCost} / mo`])
   }
 
+  console.log(table.toString())
+
+  for (const model of models) {
+    if (!model.passed && model.misses.length > 0) {
+      console.log(chalk.red(`\n${model.name} missed:`))
+      for (const miss of model.misses) {
+        console.log(` Input: "${miss.input}"`)
+        console.log(` Got: ${JSON.stringify(miss.answer)}`)
+        console.log(` Expected: "${miss.expected}"\n`)
+      }
+    }
+  }
+
   const passed = models.filter(model => model.passed)
   const cheapest = passed.sort((a,b) => a.monthlyCost - b.monthlyCost)[0]
 
   if (!cheapest) {
-    console.log(table.toString())
     console.log("No cheaper model meets quality - youre not overpaying.")
     return
   }
@@ -38,6 +51,5 @@ export const printReport = (models: ModelSummary[]) => {
   const mostExpensive = models[0] ?? cheapest 
   const savings = mostExpensive.monthlyCost - cheapest.monthlyCost
 
-  console.log(table.toString())
   console.log(`VERDICT  Switch to ${cheapest.name}, same accuracy, save ~$${savings}/mo.`);
 }

@@ -41,11 +41,17 @@ program.command('audit')
     const summaries = MODEL_IDS.map(modelId => {
       const records = results.filter(r => r.modelId === modelId)
       const passes = records.filter(r => r.pass).length
+
+      const misses = records
+        .filter(r => !r.pass)
+        .map(r => ({ input: r.question, answer: r.answer, expected: r?.expected }))
+        
       return {
         name: modelId,
         score: `${passes}/${records.length}`,
         monthlyCost: 0,
-        passed: passes === records.length
+        passed: passes === records.length,
+        misses
       }
     })
 
