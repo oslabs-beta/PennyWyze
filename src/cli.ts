@@ -1,23 +1,59 @@
 import 'dotenv/config';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { Command } from 'commander';
 import chalk from 'chalk';
+
 import { loadGoldenDataset } from './golden-dataset/load-golden-dataset.js';
-import { runAudit } from './audit.js';
-import { fakeProvider } from './providers/fake-provider.js';
+import { runAudit, type AuditResult } from './audit.js';
 import { printReport } from './report.js';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { fakeProvider } from './providers/fake-provider.js';
 import { anthropicProvider } from './providers/anthropic-provider.js';
 import { ANTHROPIC_MODELS } from './providers/anthropic-models.js';
 import { costOfCall } from './cost/calculator.js';
 
 const program = new Command();
-
 const MODEL_IDS = Object.values(ANTHROPIC_MODELS).map(model => model.id);
 
-program.name('pennywyze');
+//Helper: Calculate total execution cost for a set of audit results
+const calculateResultsCost = (results: AuditResult[]): number => {
+  return results.reduce((sum, result) => {
+    const model = Object.values(ANTHROPIC_MODELS).find(m => m.id === result.modelId)!;
+    return (
+      sum +
+      costOfCall(
+        result.inputTokens,
+        result.outputTokens,
+        model.inputPrice,
+        model.outputPrice,
+      )
+    );
+  }, 0);
+};
+
+// Helper: Save unique failed examples for grader testing
+// capture real misses as grader fixtures — dedupe against what's already saved
+const saveMissFixtures = (misses: AuditResult[]): void => {
+  if (misses.length === 0) return;
+
+  const fixturesDir = 'tests/scorers/fixtures';
+  if (!existsSync(fixturesDir)) mkdirSync(fixturesDir, { recursive: true });
+
+  const filePath = `${fixturesDir}/real-misses.jsonl`;
+  const existingLines = existsSync(filePath)
+    ? readFileSync(filePath, 'utf8').trim().split('\n').filter(Boolean)
+    : [];
+
+  const newLines = misses.map(m =>
+    JSON.stringify({ answer: m.answer, expected: m.expected }),
+  );
+  const allLines = [...new Set([...existingLines, ...newLines])];
+
+  writeFileSync(filePath, allLines.join('\n') + '\n');
+};
 
 //the audit command — its name, flags, description, and receiving function
 program
+  .name('pennywyze')
   .command('audit')
   .description(
     'Benchmark Claude tiers against your golden dataset to return the lowest-cost passing model with projected monthly savings',
@@ -36,31 +72,38 @@ program
     '100',
   )
   .action(async options => {
-    //convert flags from text into numbers — everything typed in a terminal arrives as a string
+    //Validate CLI input arguments
+    //Convert flags from text into numbers - everything typed in a terminal arrives as a string
     const volume = Number(options.volume);
-    if (Number.isNaN(volume) || volume <= 0)
+    if (Number.isNaN(volume) || volume <= 0){
       return program.error('Volume must be a positive number');
+    }
 
     const passRate = Number(options.passRate);
-    if (Number.isNaN(passRate) || passRate < 1 || passRate > 100)
+    if (Number.isNaN(passRate) || passRate < 1 || passRate > 100){
       return program.error('Pass rate must be a number between 1 and 100');
+    }
     const passBar = passRate / 100;
 
+    //Load dataset and provider
     const prompt = readFileSync(options.prompt, 'utf8');
     const dataset = loadGoldenDataset(options.dataset);
-
     const provider = options.fake ? fakeProvider : anthropicProvider;
-    // passBar (as a fraction) travels into the loop — early stopping needs it for its can-this-model-still-recover math.
-    // can-this-model-still-recover math
+
+
+    // Execute audit loop
     const results = await runAudit(
       provider,
       dataset,
       prompt,
       MODEL_IDS,
-      passBar,
+      passBar, // passBar (as a fraction) travels into the loop — early stopping needs it for its can-this-model-still-recover math.
     );
 
-    // SUMMARIZE — the bridge between the loop and the report.
+    // console.log(results)
+    
+    // Summarize per-model performance
+    // The bridge between the loop and the report.
     // One row per model: pile its records, count passes, build the row.
     // passed = met the user's pass bar (default 100)
     const summaries = MODEL_IDS.map(modelId => {
@@ -76,18 +119,7 @@ program
         model => model.id === modelId,
       )!;
 
-      const totalCost = records.reduce((sum, record) => {
-        return (
-          sum +
-          costOfCall(
-            record.inputTokens,
-            record.outputTokens,
-            model.inputPrice,
-            model.outputPrice,
-          )
-        );
-      }, 0);
-
+      const totalCost = calculateResultsCost(records)
       const averageCostPerCall = totalCost / records.length;
       const monthlyCost = averageCostPerCall * volume;
 
@@ -107,45 +139,14 @@ program
         misses,
       };
     });
-
-    const auditCost = results.reduce((sum, result) => {
-      const model = Object.values(ANTHROPIC_MODELS).find(
-        model => model.id === result.modelId,
-      )!;
-
-      return (
-        sum +
-        costOfCall(
-          result.inputTokens,
-          result.outputTokens,
-          model.inputPrice,
-          model.outputPrice,
-        )
-      );
-    }, 0);
-
-    // capture real misses as grader fixtures — dedupe against what's already saved
+  
+    // Calculate total audit cost and save real-miss fixtures
+    const auditCost = calculateResultsCost(results);
     if (!options.fake) {
-      const misses = results.filter(r => !r.pass);
-      if (misses.length > 0) {
-        const fixturesDir = 'tests/scorers/fixtures';
-        if (!existsSync(fixturesDir))
-          mkdirSync(fixturesDir, { recursive: true });
-
-        const filePath = `${fixturesDir}/real-misses.jsonl`;
-
-        const existingLines = existsSync(filePath)
-          ? readFileSync(filePath, 'utf8').trim().split('\n').filter(Boolean)
-          : [];
-
-        const newLines = misses.map(m =>
-          JSON.stringify({ answer: m.answer, expected: m.expected }),
-        );
-        const allLines = [...new Set([...existingLines, ...newLines])];
-
-        writeFileSync(filePath, allLines.join('\n') + '\n');
-      }
+      saveMissFixtures(results.filter(r => !r.pass));
     }
+
+    // Render final CLI report
     printReport(summaries, auditCost, dataset.length);
   });
 
