@@ -35,15 +35,11 @@ export const runAudit = async (
   modelIds: string[],
   passBar: number // a fraction, 0–1 (cli converts from the 0–100 flag)
 ): Promise<AuditResult[]> => {
-  // Hide terminal cursor during audit updates
-  process.stdout.write('\x1b[?25l');
-
   const results: AuditResult[] = []
 
   // Calculate max allowed failures once per audit run
   const allowedFailures = Math.floor(dataset.length * (1 - passBar))
 
-  try {
     for(const modelId of modelIds){
       // tier name only for display
       const tier = getTierName(modelId)
@@ -86,9 +82,5 @@ export const runAudit = async (
         : chalk.red(`\r ✗ ${tier} failed — stopped at question ${questionCount}\x1b[K\n`);
       process.stdout.write(statusMsg);
     }
-  } finally {
-    // Restore/show terminal cursor when audit completes or throws an error
-    process.stdout.write('\x1b[?25h');
-  }
   return results
 }
