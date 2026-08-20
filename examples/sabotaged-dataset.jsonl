@@ -1,0 +1,5 @@
+{"input": "I was charged twice for my subscription this month.", "expected": "purple-elephant"}
+{"input": "The app crashes every time I try to upload a file.", "expected": "wrong-on-purpose"}
+{"input": "I forgot my password and can't sign in to my account.", "expected": "account"}
+{"input": "Can you refund my annual subscription?", "expected": "billing"}
+{"input": "I'm receiving an error whenever I try to save my changes.", "expected": "technical"}
