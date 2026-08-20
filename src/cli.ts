@@ -97,17 +97,55 @@ program
       // Intercept errors and print clean CLI messages without leaking Node stack traces
       return program.error(`Error: ${err.message}`)
     }
-    
+
     const provider = options.fake ? fakeProvider : anthropicProvider;
 
     // Execute audit loop
-    const results = await runAudit(
-      provider,
-      dataset,
-      prompt,
-      MODEL_IDS,
-      passBar, // passBar (as a fraction) travels into the loop — early stopping needs it for its can-this-model-still-recover math.
-    );
+    // Helper to restore terminal cursor on exit or signal
+    const restoreCursor = () => {
+      process.stdout.write('\x1b[?25h')
+    }
+
+    // Listen for Ctrl+C so the cursor is restored before exiting
+    process.on('SIGINT', () => {
+      restoreCursor(); // 1. Turn the cursor back on (\x1b[?25h)
+      process.stdout.write('\n'); // 2. Drop to a new line
+      process.exit(130); // 3. Stop the program immediately
+    })
+
+    let results: AuditResult[]
+
+    try {
+      // Hide cursor ONCE at the start of execution
+      process.stdout.write('\x1b[?25l')
+
+      results = await runAudit(
+        provider,
+        dataset,
+        prompt,
+        MODEL_IDS,
+        passBar, // passBar (as a fraction) travels into the loop — early stopping needs it for its can-this-model-still-recover math.
+      );
+    } catch (err: any) {
+      restoreCursor(); // Ensure cursor is back before exiting
+
+      // Catch network failures or timeouts cleanly
+      const isNetworkOrTimeout = 
+        err.name === 'APIConnectionError' || 
+        err.name === 'APIConnectionTimeoutError' ||
+        err.message?.toLowerCase().includes('timeout') ||
+        err.message?.toLowerCase().includes('timed out');
+
+      if (isNetworkOrTimeout) {
+        return program.error('Error: Could not connect to Anthropic API. Check your network connection.');
+      }
+
+      // Tells TypeScript: execution stops here for any other error
+      return program.error(`Error: ${err.message}`);
+    } finally {
+      // GUARANTEED Cleanup: Always restore cursor on success, error, or early return
+      restoreCursor();
+    }
 
     // console.log(results)
     
