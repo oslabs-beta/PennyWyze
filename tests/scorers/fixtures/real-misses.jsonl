@@ -1,1 +1,6 @@
 {"answer":"billing","expected":"purple-elephant"}
+{"answer":"","expected":"technical"}
+{"answer":"account","expected":"technical"}
+{"answer":"account","expected":"billing"}
+{"answer":"billing","expected":"account"}
+{"answer":"technical","expected":"account"}
