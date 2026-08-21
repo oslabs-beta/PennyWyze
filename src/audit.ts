@@ -1,6 +1,7 @@
 import type { ModelProvider } from './providers/provider.js'
 import type { GoldenExample } from './golden-dataset/schema.js';
 import chalk from 'chalk'
+import type { Scorer } from './scorers/scorer.js';
 
 export type AuditResult = {
   modelId: string;
@@ -37,7 +38,8 @@ export const runAudit = async (
   dataset: GoldenExample[], 
   prompt: string, 
   modelIds: string[],
-  passBar: number // a fraction, 0–1 (cli converts from the 0–100 flag)
+  passBar: number, // a fraction, 0–1 (cli converts from the 0–100 flag)
+  scorer: Scorer
 ): Promise<AuditResult[]> => {
   const results: AuditResult[] = []
 
@@ -58,9 +60,10 @@ export const runAudit = async (
 
         const response = await provider.run(modelId, prompt, example.input);
 
-        //naive check on purpose — real grading is Milestone 2; it wrongly
-        //failing the fake's quoted answer is expected, don't fix here
-        const passed = response.text === example.expected;
+        //graded by whatever scorer was handed in — swappable without
+        //touching the loop, same pattern as the provider
+        const passed = await scorer.score(response.text, example.expected)
+
         if (!passed) failures++
 
         results.push({
