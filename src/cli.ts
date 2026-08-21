@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import 'dotenv/config';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { Command } from 'commander';
@@ -10,10 +12,30 @@ import { fakeProvider } from './providers/fake-provider.js';
 import { anthropicProvider } from './providers/anthropic-provider.js';
 import { ANTHROPIC_MODELS } from './providers/anthropic-models.js';
 import { costOfCall } from './cost/calculator.js';
+import { exactMatchScorer } from './scorers/exact-match-scorer.js';
 
 const program = new Command();
 const MODEL_IDS = Object.values(ANTHROPIC_MODELS).map(model => model.id);
 
+//Load prompt file and strip invisible control characters & BOM markers
+const loadAndSanitizePrompt = (filePath: string): string => {
+  if (!existsSync(filePath)) {
+    throw new Error(`Prompt file not found: '${filePath}'`);
+  }
+
+  const raw = readFileSync(filePath, 'utf8')
+
+  // Strip UTF-8 BOM (\uFEFF) and zero-width spaces/joiners (\u200B-\u200D)
+  const sanitized = raw
+    .replace(/^\uFEFF/, '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '');
+
+  if (!sanitized.trim()) {
+    throw new Error(`Prompt file '${filePath}' contains no readable text.`);
+  }
+
+  return sanitized;
+}
 //Helper: Calculate total execution cost for a set of audit results
 const calculateResultsCost = (results: AuditResult[]): number => {
   return results.reduce((sum, result) => {
@@ -76,29 +98,78 @@ program
     //Convert flags from text into numbers - everything typed in a terminal arrives as a string
     const volume = Number(options.volume);
     if (Number.isNaN(volume) || volume <= 0){
-      return program.error('Volume must be a positive number');
+      return program.error('Error: Volume must be a positive number.');
     }
 
     const passRate = Number(options.passRate);
     if (Number.isNaN(passRate) || passRate < 1 || passRate > 100){
-      return program.error('Pass rate must be a number between 1 and 100');
+      return program.error('Error: Pass rate must be a number between 1 and 100.');
     }
     const passBar = passRate / 100;
 
-    //Load dataset and provider
-    const prompt = readFileSync(options.prompt, 'utf8');
-    const dataset = loadGoldenDataset(options.dataset);
+    // Load dataset and provider cleanly inside an error-handling boundary
+    let prompt: string
+    let dataset: ReturnType<typeof loadGoldenDataset>
+
+    try {
+      // Prompt & dataset loaders throw descriptive errors for missing files, empty files, or invalid JSON lines
+      // Load prompt and dataset cleanly with file existence, non-empty, and sanitization checks
+      prompt = loadAndSanitizePrompt(options.prompt);
+      dataset = loadGoldenDataset(options.dataset);
+    } catch (err:any) {
+      // Intercept errors and print clean CLI messages without leaking Node stack traces
+      return program.error(`Error: ${err.message}`)
+    }
+
     const provider = options.fake ? fakeProvider : anthropicProvider;
 
-
     // Execute audit loop
-    const results = await runAudit(
-      provider,
-      dataset,
-      prompt,
-      MODEL_IDS,
-      passBar, // passBar (as a fraction) travels into the loop — early stopping needs it for its can-this-model-still-recover math.
-    );
+    // Helper to restore terminal cursor on exit or signal
+    const restoreCursor = () => {
+      process.stdout.write('\x1b[?25h')
+    }
+
+    // Listen for Ctrl+C so the cursor is restored before exiting
+    process.on('SIGINT', () => {
+      restoreCursor(); // 1. Turn the cursor back on (\x1b[?25h)
+      process.stdout.write('\n'); // 2. Drop to a new line
+      process.exit(130); // 3. Stop the program immediately
+    })
+
+    let results: AuditResult[]
+
+    try {
+      // Hide cursor ONCE at the start of execution
+      process.stdout.write('\x1b[?25l')
+
+      results = await runAudit(
+        provider,
+        dataset,
+        prompt,
+        MODEL_IDS,
+        passBar, // passBar (as a fraction) travels into the loop — early stopping needs it for its can-this-model-still-recover math.
+        exactMatchScorer,
+      );
+    } catch (err: any) {
+      restoreCursor(); // Ensure cursor is back before exiting
+
+      // Catch network failures or timeouts cleanly
+      const isNetworkOrTimeout = 
+        err.name === 'APIConnectionError' || 
+        err.name === 'APIConnectionTimeoutError' ||
+        err.message?.toLowerCase().includes('timeout') ||
+        err.message?.toLowerCase().includes('timed out');
+
+      if (isNetworkOrTimeout) {
+        return program.error('Error: Could not connect to Anthropic API. Check your network connection.');
+      }
+
+      // Tells TypeScript: execution stops here for any other error
+      return program.error(`Error: ${err.message}`);
+    } finally {
+      // GUARANTEED Cleanup: Always restore cursor on success, error, or early return
+      restoreCursor();
+    }
 
     // console.log(results)
     

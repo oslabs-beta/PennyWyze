@@ -1,6 +1,7 @@
 import type { ModelProvider } from './providers/provider.js'
 import type { GoldenExample } from './golden-dataset/schema.js';
 import chalk from 'chalk'
+import type { Scorer } from './scorers/scorer.js';
 
 export type AuditResult = {
   modelId: string;
@@ -19,9 +20,13 @@ const getTierName = (modelId: string):string => {
   return 'haiku'
 }
 
-// Helper: Draw live progress bar ticker
-const renderProgress = (tier: string, current: number, total:number) => {
-  const bar = '█'.repeat(current) + chalk.dim('░'.repeat(total - current))
+// Helper: Draw live progress bar ticker (Capped width to prevent terminal wrapping)
+const renderProgress = (tier: string, current: number, total:number, barWidth = 20) => {
+  const percentage = Math.min(1, Math.max(0, current / total))
+  const filledLength = Math.round(barWidth * percentage)
+  const emptyLength = barWidth - filledLength
+
+  const bar = '█'.repeat(filledLength) + chalk.dim('░'.repeat(emptyLength))
   // \x1b[K clears from cursor to end of line, avoiding hardcoded spaces
   process.stdout.write(
     chalk.bold.cyan(`\r Auditing ▷ ${tier} ${bar} ${current}/${total}\x1b[K`),
@@ -33,17 +38,14 @@ export const runAudit = async (
   dataset: GoldenExample[], 
   prompt: string, 
   modelIds: string[],
-  passBar: number // a fraction, 0–1 (cli converts from the 0–100 flag)
+  passBar: number, // a fraction, 0–1 (cli converts from the 0–100 flag)
+  scorer: Scorer
 ): Promise<AuditResult[]> => {
-  // Hide terminal cursor during audit updates
-  process.stdout.write('\x1b[?25l');
-
   const results: AuditResult[] = []
 
   // Calculate max allowed failures once per audit run
   const allowedFailures = Math.floor(dataset.length * (1 - passBar))
 
-  try {
     for(const modelId of modelIds){
       // tier name only for display
       const tier = getTierName(modelId)
@@ -58,9 +60,10 @@ export const runAudit = async (
 
         const response = await provider.run(modelId, prompt, example.input);
 
-        //naive check on purpose — real grading is Milestone 2; it wrongly
-        //failing the fake's quoted answer is expected, don't fix here
-        const passed = response.text === example.expected;
+        //graded by whatever scorer was handed in — swappable without
+        //touching the loop, same pattern as the provider
+        const passed = await scorer.score(response.text, example.expected)
+
         if (!passed) failures++
 
         results.push({
@@ -86,9 +89,5 @@ export const runAudit = async (
         : chalk.red(`\r ✗ ${tier} failed — stopped at question ${questionCount}\x1b[K\n`);
       process.stdout.write(statusMsg);
     }
-  } finally {
-    // Restore/show terminal cursor when audit completes or throws an error
-    process.stdout.write('\x1b[?25h');
-  }
   return results
 }

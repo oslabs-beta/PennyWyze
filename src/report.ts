@@ -38,7 +38,7 @@ export const printReport = (models: ModelSummary[], auditCost: number, datasetSi
   console.log(table.toString() + '\n');
 
   // Failure Diagnostics / Misses (Structured tree view)
-  const failedModels = models.filter(m => !m.passed && m.misses.length > 0)
+  const failedModels = models.filter(m => m.misses.length > 0)
 
   if (failedModels.length > 0) {
     console.log(chalk.bold.red('  FAILED TEST DETAILS'))

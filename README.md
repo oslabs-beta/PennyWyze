@@ -93,6 +93,15 @@ compliance miss for a production task.
 Evaluation defaults to requiring a 100% score to pass; `--pass-rate` loosens
 the bar.
 
+## Repeatability
+
+Verdict stability tested across 5 consecutive real audits: identical verdicts
+and identical per-model scores every run. Per-answer output-token counts vary
+slightly on the newest models (adaptive thinking is non-deterministic), which
+moves cost projections a few percent between runs — but scores and the verdict
+held constant in every trial. Re-run/threshold logic deliberately omitted:
+the data says it isn't needed.
+
 ## Golden Dataset Format
 
 **What a golden dataset is:** a small file of real examples from your AI

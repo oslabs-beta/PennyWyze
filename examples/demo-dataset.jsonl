@@ -1,0 +1,50 @@
+{"input": "I was charged twice for my subscription this month.", "expected": "billing"}
+{"input": "The app crashes every time I try to upload a file.", "expected": "technical"}
+{"input": "I forgot my password and can't sign in.", "expected": "account"}
+{"input": "Can you refund my annual subscription?", "expected": "billing"}
+{"input": "I'm getting an error whenever I try to save my changes.", "expected": "technical"}
+{"input": "Why did my card get declined when I tried to renew?", "expected": "billing"}
+{"input": "The dashboard has been loading forever since this morning.", "expected": "technical"}
+{"input": "I need to change the email address on my profile.", "expected": "account"}
+{"input": "You billed me $49.99 but the plan page says $39.99??", "expected": "billing"}
+{"input": "Every export comes out as a corrupted zip file.", "expected": "technical"}
+{"input": "How do I delete my account permanently?", "expected": "account"}
+{"input": "I upgraded to Pro but I'm still being charged the old amount plus the new one.", "expected": "billing"}
+{"input": "The mobile app won't open at all after the latest update, just a white screen.", "expected": "technical"}
+{"input": "Someone else seems to have logged into my account, I got a weird alert.", "expected": "account"}
+{"input": "I cancelled in March but you charged me in April anyway.", "expected": "billing"}
+{"input": "Images in the editor show up as broken links no matter what I do.", "expected": "technical"}
+{"input": "My two-factor codes stopped working and now I'm locked out.", "expected": "account"}
+{"input": "Please send me an invoice for last month, my finance team needs it.", "expected": "billing"}
+{"input": "The search feature returns nothing even for things I know exist.", "expected": "technical"}
+{"input": "I want to merge my two accounts into one.", "expected": "account"}
+{"input": "wheres my refund??? its been 2 weeks", "expected": "billing"}
+{"input": "The site keeps logging me out every five minutes, super annoying.", "expected": "technical"}
+{"input": "I want to transfer ownership of my account to a coworker before I leave the company.", "expected": "account"}
+{"input": "I see a charge from you on my statement but I never signed up for anything.", "expected": "billing"}
+{"input": "Copy paste doesn't work inside the notes field on Firefox.", "expected": "technical"}
+{"input": "My username is misspelled and I can't find where to fix it.", "expected": "account"}
+{"input": "Do you offer student discounts? I'm being charged full price.", "expected": "billing"}
+{"input": "The video call feature drops after exactly 40 minutes every single time.", "expected": "technical"}
+{"input": "I never got the verification email to activate my account, and I have checked spam twice.", "expected": "account"}
+{"input": "You've been charging my old card, I updated my payment info months ago.", "expected": "billing"}
+{"input": "Dark mode makes half the buttons invisible.", "expected": "technical"}
+{"input": "I want to change my username but the field is greyed out.", "expected": "account"}
+{"input": "The price went up without any warning email. Why?", "expected": "billing"}
+{"input": "Notifications arrive six hours late on Android.", "expected": "technical"}
+{"input": "My profile photo upload keeps failing but only on my work laptop.", "expected": "technical"}
+{"input": "How do I downgrade to the cheaper plan, and will my next charge be smaller?", "expected": "billing"}
+{"input": "The API returns a 500 error for every request since yesterday.", "expected": "technical"}
+{"input": "I created my account with Google sign-in but now I want a regular password.", "expected": "account"}
+{"input": "im not paying for this anymore cancel it", "expected": "billing"}
+{"input": "Autosave silently stopped working and I lost an hour of edits.", "expected": "technical"}
+{"input": "My account says it's suspended but I have no idea why.", "expected": "account"}
+{"input": "The receipt you emailed shows the wrong company name for my business.", "expected": "billing"}
+{"input": "Keyboard shortcuts do nothing in the new editor.", "expected": "technical"}
+{"input": "I can't log in and honestly at this point I just want my money back.", "expected": "billing"}
+{"input": "How do I resend an account invite to my teammate? The old one I sent says expired.", "expected": "account"}
+{"input": "Loading a project with more than 100 items freezes the whole tab.", "expected": "technical"}
+{"input": "Am I still being billed for the seats we removed last quarter?", "expected": "billing"}
+{"input": "My email changed at work and now I can't receive your login codes.", "expected": "account"}
+{"input": "The PDF download button just spins forever.", "expected": "technical"}
+{"input": "I closed my account last year, why did I just get a payment reminder?", "expected": "billing"}
