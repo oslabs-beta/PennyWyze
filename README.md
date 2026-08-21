@@ -39,34 +39,47 @@ to run the whole pipeline on a built-in fake provider — free and instant.)
 ## Run an audit
 
 ```bash
-npm run dev -- audit --prompt examples/prompt.md --dataset examples/golden-dataset.jsonl
+pennywyze audit --prompt examples/prompt.md --dataset examples/demo-dataset.jsonl --pass-rate 90
 ```
 
-(The lone `--` separates npm's flags from PennyWyze's.) Output:
+(Without `npm link`, the dev path works too:
+`npm run dev -- audit --prompt ... --dataset ...` — the lone `--` separates
+npm's flags from PennyWyze's.) Output:
 
 ```
- ✓ opus audited — 5 questions
- ✓ sonnet audited — 5 questions
- ✓ haiku audited — 5 questions
+ ✓ opus audited — 50 questions
+ ✓ sonnet audited — 50 questions
+ ✓ haiku audited — 50 questions
 
-┌───────────────────────────┬──────────┬──────────────┐
-│ MODEL                     │ ACCURACY │ COST / MONTH │
-├───────────────────────────┼──────────┼──────────────┤
-│ claude-opus-5             │ 5/5 PASS │ $178.50 / mo │
-├───────────────────────────┼──────────┼──────────────┤
-│ claude-sonnet-5           │ 5/5 PASS │ $71.40 / mo  │
-├───────────────────────────┼──────────┼──────────────┤
-│ claude-haiku-4-5-20251001 │ 5/5 PASS │ $25.90 / mo  │
-└───────────────────────────┴──────────┴──────────────┘
-VERDICT  Switch to claude-haiku-4-5, same accuracy, save ~$152/mo.
+  PENNYWYZE AUDIT REPORT
+┌───────────────────────────┬────────────┬────────────────┐
+│ MODEL                     │  ACCURACY  │ EST. COST / MO │
+├───────────────────────────┼────────────┼────────────────┤
+│ claude-opus-5             │ 48/50 PASS │   $190.49 / mo │
+├───────────────────────────┼────────────┼────────────────┤
+│ claude-sonnet-5           │ 49/50 PASS │    $74.94 / mo │
+├───────────────────────────┼────────────┼────────────────┤
+│ claude-haiku-4-5-20251001 │ 48/50 PASS │    $26.26 / mo │
+└───────────────────────────┴────────────┴────────────────┘
 
-Note: only 5 examples tested, verdicts are more reliable with 30+
-This audit made 15 calls and cost $0.04
+  FAILED TEST DETAILS
+-------------------------------------------------------
+ ● claude-haiku-4-5-20251001
+   └─ Input:    "I can't log in and honestly at this point I just want my ..."
+      Received: "account"
+      Expected: "billing"
+-------------------------------------------------------
+
+ VERDICT  Switch to claude-haiku-4-5-20251001 - save ~$164.23/mo.
+
+  ℹ Audit cost: $0.15
 ```
 
 Each model runs your real prompt against your real examples, one API call per
 question — a live progress bar shows the audit working. Models that can't
 reach the pass bar stop early, so failed tiers don't keep spending your money.
+Misses are printed for every model — even passing ones — so you see exactly
+what the cheaper tier gets wrong before you switch.
 
 ### Flags
 
@@ -128,7 +141,7 @@ line — no wrapping array, no commas between lines.
 
 ```jsonl
 {"input": "My card was charged twice", "expected": "billing"}
-{"input": "App crashes on upload", "expected": "tech-problem"}
+{"input": "App crashes on upload", "expected": "technical"}
 ```
 
 **JSONL vs regular JSON:** regular JSON is one structure parsed all at
@@ -145,8 +158,8 @@ examples; under 30, the report says so.
 
 Built at OSLabs. Working today: real audits against live Claude models,
 grading with cleanup, early stopping, configurable pass bar, live progress,
-misses reporting, real cost projections and audit self-cost, free fake mode.
-npm package coming soon.
+misses reporting, real cost projections and audit self-cost, free fake mode,
+installable CLI via npm link. Publishing to the npm registry coming soon.
 
 ## License
 
