@@ -1,5 +1,8 @@
 # PennyWyze
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D18-339933.svg)](#install--setup)
+
 **DON'T PAY FOR WASTED INTELLIGENCE**
 
 PennyWyze audits which Claude tier — Opus, Sonnet, or Haiku — is the cheapest
@@ -8,6 +11,16 @@ dataset of real examples with known-correct answers; it runs every example
 against all three tiers, grades each answer, and prints a report: each model's
 score, its projected monthly cost at your volume, what the audit itself cost,
 and a verdict naming the cheapest passing model and what switching saves you.
+
+## Contents
+
+- [Install & Setup](#install--setup)
+- [Run an Audit](#run-an-audit)
+- [Grading Rules](#grading-rules)
+- [Repeatability](#repeatability)
+- [Golden Dataset Format](#golden-dataset-format)
+- [Troubleshooting](#troubleshooting)
+- [Status](#status)
 
 ## Install & Setup
 
@@ -36,7 +49,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 Already using Anthropic? You're done. (No key yet? Add `--fake` to any command
 to run the whole pipeline on a built-in fake provider — free and instant.)
 
-## Run an audit
+## Run an Audit
 
 ```bash
 pennywyze audit --prompt examples/prompt.md --dataset examples/demo-dataset.jsonl --pass-rate 90
@@ -88,10 +101,18 @@ what the cheaper tier gets wrong before you switch.
 | `--prompt <filepath>` | yes | — | your instructions file, sent with every call |
 | `--dataset <filepath>` | yes | — | your golden dataset (format below) |
 | `--volume <count>` | no | 100000 | your messages per month — scales the cost projections, never the verdict |
-| `--pass-rate <percent>` | no | 100 | minimum score to count as passing (e.g. 90 = one miss in ten is fine) |
+| `--pass-rate <percent>` | no | 100 | minimum score to count as passing, 1–100 (e.g. 90 = one miss in ten is fine) |
 | `--fake` | no | off | run against a built-in fake provider: no API key, no cost, instant |
 
-## Grading rules
+### A Note on Pricing
+
+Per-token rates for all three tiers are hardcoded from Anthropic's published
+pricing. Anthropic changes these periodically — if a monthly-cost projection
+looks off, check current pricing before trusting it at scale. The verdict
+(which tier is cheapest) is far more robust to a stale rate than the exact
+dollar figure is.
+
+## Grading Rules
 
 Answers are cleaned before comparison — surrounding quotes, code fences,
 capitalization, and trailing punctuation are stripped from both sides — then
@@ -154,12 +175,36 @@ Bad lines stop the audit immediately with the line number — no API money
 is ever spent on a broken dataset. Verdicts get more trustworthy with more
 examples; under 30, the report says so.
 
+## Troubleshooting
+
+PennyWyze fails loud and specific rather than crashing with a stack trace.
+If you hit one of these, the fix is usually immediate:
+
+| You'll see | It means | Fix |
+|---|---|---|
+| `Prompt file not found: '...'` | `--prompt` points at a path that doesn't exist | Check the path, or that you're running from the right directory |
+| `Dataset file not found: '...'` | `--dataset` points at a path that doesn't exist | Same as above |
+| `Prompt file '...' contains no readable text.` | The prompt file exists but is empty | Add your instructions to the file |
+| `Line N of your golden dataset is not valid JSON.` | Line N has a syntax error (missing quote, trailing comma, ...) | Fix that exact line — nothing before or after it was touched |
+| `Line N of your golden dataset is invalid: ...` | Line N parsed as JSON but is missing `input` or `expected` | Add the missing field named in the message |
+| `Dataset file '...' is empty. Provide at least 1 test example.` | The file has no usable rows | Add at least one `{"input": ..., "expected": ...}` line |
+| `Error: Volume must be a positive number.` | `--volume` wasn't a number, or was ≤ 0 | Pass a positive number, e.g. `--volume 5000` |
+| `Error: Pass rate must be a number between 1 and 100.` | `--pass-rate` was outside 1–100 | Pass a percentage in that range |
+| `Error: Could not connect to Anthropic API. Check your network connection.` | A network or timeout failure reaching Anthropic | Check your connection and retry, or run with `--fake` to confirm the rest of the pipeline works |
+
+No key yet, or want to sanity-check a prompt/dataset pair without spending
+anything? Add `--fake` to any command — it runs the identical pipeline
+against a built-in stand-in provider.
+
 ## Status
 
 Built at OSLabs. Working today: real audits against live Claude models,
 grading with cleanup, early stopping, configurable pass bar, live progress,
 misses reporting, real cost projections and audit self-cost, free fake mode,
 installable CLI via npm link. Publishing to the npm registry coming soon.
+
+Not yet on the audit ladder: Anthropic's Fable 5 tier. PennyWyze currently
+audits Opus, Sonnet, and Haiku only.
 
 ## License
 
