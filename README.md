@@ -4,14 +4,19 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![npm](https://img.shields.io/badge/npm-pennywyze-CB3837.svg)](https://www.npmjs.com/package/pennywyze)
-[![Node](https://img.shields.io/badge/node-%3E%3D18-339933.svg)](#getting-started)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing--development)
+[![GitHub](https://img.shields.io/badge/GitHub-repo-181717.svg)](https://github.com/oslabs-beta/PennyWyze)
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+![Commander](https://img.shields.io/badge/Commander.js-000000)
+![Zod](https://img.shields.io/badge/Zod-3E67B1)
+[![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
+![Claude](https://img.shields.io/badge/Claude-D97757)
 
 </div>
 
 #
-
-<a href="https://github.com/oslabs-beta/PennyWyze">![GitHub](https://img.shields.io/badge/GitHub-repo-181717)</a>
 
 Most teams default to the smartest, most expensive Claude tier because checking whether a cheaper one would work means building a whole test harness — so they never check, and quietly overpay every month.
 
@@ -145,11 +150,9 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## Contributors
 
-| | GitHub | LinkedIn |
-|---|---|---|
-| **Olivia McKelvey** | [🐙](https://github.com/Oliviamckelvey) | [🖇️](https://www.linkedin.com/in/mckelveyolivia/) |
-| **Edward Zgonc** | [🐙](https://github.com/Edward-Zgonc) | [🖇️](https://www.linkedin.com/in/edward-zgonc/) |
-| **Maia Akbard** | [🐙](https://github.com/MaiaKBard) | [🖇️](https://www.linkedin.com/in/maiakbard/) |
+- Olivia McKelvey: [GitHub 🐙](https://github.com/Oliviamckelvey) | [LinkedIn 🖇️](https://www.linkedin.com/in/mckelveyolivia/)
+- Edward Zgonc: [GitHub 🐙](https://github.com/Edward-Zgonc) | [LinkedIn 🖇️](https://www.linkedin.com/in/edward-zgonc/)
+- Maia Akbard: [GitHub 🐙](https://github.com/MaiaKBard) | [LinkedIn 🖇️](https://www.linkedin.com/in/maiakbard/)
 
 ## License
 
