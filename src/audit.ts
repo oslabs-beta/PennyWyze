@@ -13,14 +13,16 @@ export type AuditResult = {
   outputTokens: number;
 }
 
-//Helper: Extract tier name cleanly for progress display
+// Matches by substring, so it only recognizes opus/sonnet/haiku today.
+// Falls back to 'haiku' for anything else — display label only, doesn't
+// affect grading or cost, but will mislabel a future 4th tier (see roadmap).
 const getTierName = (modelId: string):string => {
   if (modelId.includes('opus')) return 'opus'
   if (modelId.includes('sonnet')) return 'sonnet'
   return 'haiku'
 }
 
-// Helper: Draw live progress bar ticker (Capped width to prevent terminal wrapping)
+// barWidth is capped so the bar can't wrap in narrow terminals
 const renderProgress = (tier: string, current: number, total:number, barWidth = 20) => {
   const percentage = Math.min(1, Math.max(0, current / total))
   const filledLength = Math.round(barWidth * percentage)
@@ -43,11 +45,12 @@ export const runAudit = async (
 ): Promise<AuditResult[]> => {
   const results: AuditResult[] = []
 
-  // Calculate max allowed failures once per audit run
+  // Same threshold applies to every model — computed once, not per model,
+  // since it only depends on dataset size and the pass bar, not the model.
   const allowedFailures = Math.floor(dataset.length * (1 - passBar))
 
     for(const modelId of modelIds){
-      // tier name only for display
+      // Tier name is only for display — has no effect on grading or cost
       const tier = getTierName(modelId)
 
       let questionCount = 0 // resets per model — each tier's progress reads 1/N fresh
@@ -59,9 +62,9 @@ export const runAudit = async (
         renderProgress(tier, questionCount, dataset.length)
 
         const response = await provider.run(modelId, prompt, example.input);
-
-        //graded by whatever scorer was handed in — swappable without
-        //touching the loop, same pattern as the provider
+        
+        // Graded by whatever scorer was handed in — swappable without
+        // touching the loop, same pattern as the provider
         const passed = await scorer.score(response.text, example.expected)
 
         if (!passed) failures++
@@ -76,13 +79,13 @@ export const runAudit = async (
           outputTokens: response.outputTokens
         })
 
-        //stop once this model mathematically can't reach the pass bar —
-        //e.g. 50 questions at 90% allows 5 misses; break on the 6th
+        // Stop once this model mathematically can't reach the pass bar —
+        // e.g. 50 questions at 90% allows 5 misses; break on the 6th
         if (failures > allowedFailures) break   
       }
 
-        //resolve the ticker into a permanent line — green if it survived,
-        //red if it failed early; \n releases the line for the next model
+        // Resolve the ticker into a permanent line — green if it survived,
+        // red if it failed early; \n releases the line for the next model
         const completedAll = questionCount === dataset.length;
         const statusMsg = completedAll
         ? chalk.green(`\r ✓ ${tier} audited — ${dataset.length} questions\x1b[K\n`)

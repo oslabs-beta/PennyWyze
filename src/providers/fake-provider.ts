@@ -1,7 +1,7 @@
 import type { ModelProvider } from './provider.js'
 
-//emulates Claude at $0 for development — the real provider swaps in later.
-//variety is deliberate: the wrong label + quoted answer feed the grading
+//Emulates Claude at $0 for development — the real provider swaps in later.
+//Variety is deliberate: the wrong label + quoted answer feed the grading
 const answers: string[] = [
   'billing',
   'tech-problem',
@@ -19,7 +19,7 @@ export const fakeProvider: ModelProvider = {
 
     callCount++
 
-    //accepts the contract's three inputs but never reads them
+    //Accepts the contract's three inputs but never reads them
     //each call just returns the next answer in the list
     return {
       text: answer,
