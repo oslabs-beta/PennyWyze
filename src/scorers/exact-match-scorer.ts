@@ -1,6 +1,8 @@
 import type { Scorer } from "./scorer.js";
 
 const normalize = (text:string):string => {
+  // Order matters: strip wrappers (code fences, quotes) before touching the
+  // core text, so a quoted or fenced answer normalizes the same as a bare one.
   let s = text
     .trim()
     .replace(/```[a-z]*\n?/g, "")
