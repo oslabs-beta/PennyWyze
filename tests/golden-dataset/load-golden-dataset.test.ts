@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { loadGoldenDataset } from './load-golden-dataset.js';
+import { loadGoldenDataset } from '../../src/golden-dataset/load-golden-dataset';
 
 describe('loadGoldenDataset', () => {
   it('loads all valid golden dataset examples in order', () => {

@@ -1,3 +1,4 @@
+// Manual validation script, not part of the build
 import Anthropic from '@anthropic-ai/sdk';
 import 'dotenv/config';
 
