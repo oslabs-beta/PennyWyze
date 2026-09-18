@@ -1,8 +1,11 @@
 {
   "name": "pennywyze",
   "version": "1.0.0",
-  "description": "",
+  "description": "Audits which Claude tier is the cheapest one that still passes your quality bar.",
   "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
   "bin": {
     "pennywyze": "./dist/cli.js"
   },
@@ -15,9 +18,14 @@
     "type": "git",
     "url": "git+https://github.com/oslabs-beta/PennyWyze.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["cli", "anthropic", "claude", "llm", "cost-optimization", "evaluation"],
+  "author": "PennyWyze Team",
+  "contributors": [
+    "Olivia McKelvey",
+    "Edward Zgonc",
+    "Maia Bard"
+  ],
+  "license": "MIT",
   "type": "module",
   "bugs": {
     "url": "https://github.com/oslabs-beta/PennyWyze/issues"
