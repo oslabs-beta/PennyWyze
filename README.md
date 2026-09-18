@@ -152,7 +152,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 - Olivia McKelvey: [GitHub 🐙](https://github.com/Oliviamckelvey) | [LinkedIn 🖇️](https://www.linkedin.com/in/mckelveyolivia/)
 - Edward Zgonc: [GitHub 🐙](https://github.com/Edward-Zgonc) | [LinkedIn 🖇️](https://www.linkedin.com/in/edward-zgonc/)
-- Maia Akbard: [GitHub 🐙](https://github.com/MaiaKBard) | [LinkedIn 🖇️](https://www.linkedin.com/in/maiakbard/)
+- Maia Bard: [GitHub 🐙](https://github.com/MaiaKBard) | [LinkedIn 🖇️](https://www.linkedin.com/in/maiakbard/)
 
 ## License
 
