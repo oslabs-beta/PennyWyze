@@ -20,7 +20,7 @@
 
 Most teams default to the smartest, most expensive Claude tier because checking whether a cheaper one would work means building a whole test harness — so they never check, and quietly overpay every month.
 
-PennyWyze is that harness, already built. Point it at your real prompt and a handful of examples you know the right answer to; it runs all three Claude tiers against them, grades every answer, prices each tier from real token usage, and tells you the cheapest one that still passes.
+PennyWyze is that evaluation harness, already built. Point it at your real prompt and a handful of examples you know the right answer to; it runs all three Claude tiers against them, grades every answer, prices each tier from real token usage, and tells you the cheapest one that still passes.
 
 **What makes it different:**
 - Costs are measured from real API token counts, never estimated
@@ -34,6 +34,8 @@ PennyWyze is that harness, already built. Point it at your real prompt and a han
 - [See It Run](#see-it-run)
 - [Flags](#flags)
 - [How It Grades](#how-it-grades)
+- [Repeatability](#repeatability)
+- [Troubleshooting](#troubleshooting)
 - [Contributing & Development](#contributing--development)
 - [Roadmap](#roadmap)
 - [Contributors](#contributors)
@@ -68,7 +70,9 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 
 ## See It Run
 
-<!-- TODO: replace with a recorded terminal GIF (asciinema.org) or a short demo video link before launch -->
+![PennyWyze running a real audit](./assets/demo.gif)
+
+*(Sped up for length — a real 50-example audit takes about 3 minutes. The final report and verdict play at real speed.)*
 
 ```
  ✓ opus audited — 50 questions
@@ -79,14 +83,14 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 ┌───────────────────────────┬────────────┬────────────────┐
 │ MODEL                     │  ACCURACY  │ EST. COST / MO │
 ├───────────────────────────┼────────────┼────────────────┤
-│ claude-opus-5             │ 49/50 PASS │   $205.94 / mo │
+│ claude-opus-5             │ 48/50 PASS │   $200.94 / mo │
 ├───────────────────────────┼────────────┼────────────────┤
-│ claude-sonnet-5           │ 48/50 PASS │    $77.30 / mo │
+│ claude-sonnet-5           │ 49/50 PASS │    $77.92 / mo │
 ├───────────────────────────┼────────────┼────────────────┤
 │ claude-haiku-4-5-20251001 │ 49/50 PASS │    $26.26 / mo │
 └───────────────────────────┴────────────┴────────────────┘
 
- VERDICT  Switch to claude-haiku-4-5-20251001 - save ~$179.68/mo.
+ VERDICT  Switch to claude-haiku-4-5-20251001 - save ~$174.68/mo.
 
   ℹ Audit cost: $0.15
 ```
@@ -104,9 +108,35 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 
 Both sides are cleaned first (quotes, casing, code fences, trailing punctuation stripped), then compared **exactly** — not "contains." A decorated correct answer passes; a wrong answer never does, and an answer buried in a sentence fails on purpose, because ignoring "respond with one word" is a real bug in production. The winner is always the *cheapest tier that passed* — never just the cheapest tier.
 
+## Repeatability
+
+Verdict stability tested across 5 consecutive real audits: identical verdicts
+and identical per-model scores every run. Per-answer output-token counts vary
+slightly on the newest models (adaptive thinking is non-deterministic), which
+moves cost projections a few percent between runs — but scores and the verdict
+held constant in every trial. Re-run/threshold logic deliberately omitted:
+the data says it isn't needed.
+
+## Troubleshooting
+
+PennyWyze fails loud and specific rather than crashing with a stack trace.
+If you hit one of these, the fix is usually immediate:
+
+| You'll see | It means | Fix |
+|---|---|---|
+| `Prompt file not found: '...'` | `--prompt` points at a path that doesn't exist | Check the path, or that you're running from the right directory |
+| `Dataset file not found: '...'` | `--dataset` points at a path that doesn't exist | Same as above |
+| `Prompt file '...' contains no readable text.` | The prompt file exists but is empty | Add your instructions to the file |
+| `Line N of your golden dataset is not valid JSON.` | Line N has a syntax error (missing quote, trailing comma, ...) | Fix that exact line — nothing before or after it was touched |
+| `Line N of your golden dataset is invalid: ...` | Line N parsed as JSON but is missing `input` or `expected` | Add the missing field named in the message |
+| `Dataset file '...' is empty. Provide at least 1 test example.` | The file has no usable rows | Add at least one `{"input": ..., "expected": ...}` line |
+| `Error: Volume must be a positive number.` | `--volume` wasn't a number, or was ≤ 0 | Pass a positive number, e.g. `--volume 5000` |
+| `Error: Pass rate must be a number between 1 and 100.` | `--pass-rate` was outside 1–100 | Pass a percentage in that range |
+| `Error: Could not connect to Anthropic API. Check your network connection.` | A network or timeout failure reaching Anthropic | Check your connection and retry, or run with `--fake` to confirm the rest of the pipeline works |
+
 ## Contributing & Development
 
-Contributions are welcome — fork the repo, branch, commit, and open a PR against `main`.
+Contributions are welcome — fork the repo, branch, commit, and open a PR against `main`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
 Build from source instead of installing from npm:
 
