@@ -70,7 +70,7 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 
 ## See It Run
 
-![PennyWyze running a real audit](./assets/demo.gif)
+<img src="./assets/demo.gif" alt="PennyWyze running a real audit" width="500"/>
 
 *(Sped up for length — a real 50-example audit takes about 3 minutes. The final report and verdict play at real speed.)*
 
@@ -89,6 +89,34 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 ├───────────────────────────┼────────────┼────────────────┤
 │ claude-haiku-4-5-20251001 │ 49/50 PASS │    $26.26 / mo │
 └───────────────────────────┴────────────┴────────────────┘
+
+  FAILED TEST DETAILS
+-------------------------------------------------------
+
+ ● claude-opus-5
+   ├─ Input:    "The site keeps logging me out every five minutes, super a..."
+   │  Received: "account"
+   │  Expected: "technical"
+   │
+   └─ Input:    "I can't log in and honestly at this point I just want my ..."
+      Received: "account"
+      Expected: "billing"
+
+-------------------------------------------------------
+
+ ● claude-sonnet-5
+   └─ Input:    "The site keeps logging me out every five minutes, super a..."
+      Received: "account"
+      Expected: "technical"
+
+-------------------------------------------------------
+
+ ● claude-haiku-4-5-20251001
+   └─ Input:    "I can't log in and honestly at this point I just want my ..."
+      Received: "account"
+      Expected: "billing"
+
+-------------------------------------------------------
 
  VERDICT  Switch to claude-haiku-4-5-20251001 - save ~$174.68/mo.
 
