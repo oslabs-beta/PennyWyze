@@ -1,4 +1,4 @@
-//the shape every model-caller must fit — lets the fake and real providers swap without anything else changing
+// The shape every model-caller must fit — lets the fake and real providers swap without anything else changing
 export interface ModelProvider {
     run(
         modelId: string,

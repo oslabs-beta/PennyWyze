@@ -10,10 +10,8 @@ type ModelSummary = {
 };
 
 export const printReport = (models: ModelSummary[], auditCost: number, datasetSize: number) => {
-  // Header Banner
   console.log('\n' + chalk.bold.cyan('  PENNYWYZE AUDIT REPORT'))
 
-  // Main Comparison Table 
   const table = new Table({
     head: ['MODEL', 'ACCURACY', 'EST. COST / MO'],
     colAligns: ['left', 'center', 'right'],
@@ -37,7 +35,6 @@ export const printReport = (models: ModelSummary[], auditCost: number, datasetSi
 
   console.log(table.toString() + '\n');
 
-  // Failure Diagnostics / Misses (Structured tree view)
   const failedModels = models.filter(m => m.misses.length > 0)
 
   if (failedModels.length > 0) {
@@ -49,34 +46,34 @@ export const printReport = (models: ModelSummary[], auditCost: number, datasetSi
 
       model.misses.forEach((miss, index) => {
         const isLast = index === model.misses.length - 1
-        const branch = isLast ? '└─' : '├─' // Main node connector
-        const pipe = isLast ? '  ' : '│ ' // Continuous vertical line for child items
-
+        const branch = isLast ? '└─' : '├─' // connector shown before this line
+        const pipe = isLast ? '  ' : '│ ' // vertical continuation for the lines below
         const MAX_LENGTH = 60; // Set your preferred character cap
 
-        // Clean truncating to prevent multi-line breaks on long input strings
-        // Only cut and append dots if the text is strictly longer than MAX_LENGTH
+        // Only truncate if strictly longer than MAX_LENGTH, so a line at
+        // exactly the cap isn't needlessly cut.
         const cleanInput = miss.input.length > MAX_LENGTH
           ? `${miss.input.slice(0, MAX_LENGTH - 3)}...`
           : miss.input
 
-        // Each property line explicitly reuses the tree connector
         console.log(chalk.dim(`   ${branch} Input:    `) + `"${cleanInput}"`)
         console.log(chalk.dim(`   ${pipe} Received: `) + chalk.red(JSON.stringify(miss.answer)))
         console.log(chalk.dim(`   ${pipe} Expected: `) + chalk.green(`"${miss.expected}"`))
 
-        // Add a blank connecting line between items (except after the last item)
+        // Blank line between misses for readability, skipped after the last one
         if (!isLast) console.log(chalk.dim(`   │`))
       })
     console.log('\n' + chalk.dim('-'.repeat(55)) + '\n')
     }
   }
 
-  // Reccomendation Verdict & Audit Notes
+  // Only ever recommend a model that passed — a cheap wrong answer must never win
   const passed = models.filter(model => model.passed)
   const cheapest = passed.sort((a,b) => a.monthlyCost - b.monthlyCost)[0]
 
   if (!cheapest) {
+    // Nothing passed — a legitimate outcome, not an error. It means the
+    // user is already on the cheapest tier that meets their bar.
     console.log(
       chalk.bgRed.black.bold(' VERDICT ') + 
       ' ' +
@@ -84,7 +81,8 @@ export const printReport = (models: ModelSummary[], auditCost: number, datasetSi
     )
     console.log(chalk.dim('  You are currently on the optimal pricing tier.'))
   } else {
-    // Dynamically derive the most expensive model by monthly cost
+    // Savings compare against whichever model actually cost the most this
+    // run, not a hardcoded tier — matters once more than three tiers exist.
     const maxCost = Math.max(...models.map(m => m.monthlyCost))
     const savings = maxCost - cheapest.monthlyCost
 
@@ -94,7 +92,6 @@ export const printReport = (models: ModelSummary[], auditCost: number, datasetSi
     )
   }
 
-  // Footer Metadata
   console.log()
   if (datasetSize < 30) {
     console.log(chalk.yellow(`  ⚠ Small dataset: only ${datasetSize} examples tested (30+ recommended for statistical confidence).`))

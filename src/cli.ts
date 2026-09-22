@@ -15,9 +15,11 @@ import { costOfCall } from './cost/calculator.js';
 import { exactMatchScorer } from './scorers/exact-match-scorer.js';
 
 const program = new Command();
+// Derived from ANTHROPIC_MODELS so prices and IDs never drift out of sync.
+// Object key order (opus, sonnet, haiku) is preserved here — that's why the
+// report always prints in that order, without anyone sorting it explicitly.
 const MODEL_IDS = Object.values(ANTHROPIC_MODELS).map(model => model.id);
 
-//Load prompt file and strip invisible control characters & BOM markers
 const loadAndSanitizePrompt = (filePath: string): string => {
   if (!existsSync(filePath)) {
     throw new Error(`Prompt file not found: '${filePath}'`);
@@ -36,7 +38,7 @@ const loadAndSanitizePrompt = (filePath: string): string => {
 
   return sanitized;
 }
-//Helper: Calculate total execution cost for a set of audit results
+
 const calculateResultsCost = (results: AuditResult[]): number => {
   return results.reduce((sum, result) => {
     const model = Object.values(ANTHROPIC_MODELS).find(m => m.id === result.modelId)!;
@@ -52,8 +54,6 @@ const calculateResultsCost = (results: AuditResult[]): number => {
   }, 0);
 };
 
-// Helper: Save unique failed examples for grader testing
-// capture real misses as grader fixtures — dedupe against what's already saved
 const saveMissFixtures = (misses: AuditResult[]): void => {
   if (misses.length === 0) return;
 
@@ -73,7 +73,6 @@ const saveMissFixtures = (misses: AuditResult[]): void => {
   writeFileSync(filePath, allLines.join('\n') + '\n');
 };
 
-//the audit command — its name, flags, description, and receiving function
 program
   .name('pennywyze')
   .command('audit')
@@ -94,8 +93,7 @@ program
     '100',
   )
   .action(async options => {
-    //Validate CLI input arguments
-    //Convert flags from text into numbers - everything typed in a terminal arrives as a string
+    // Convert flags from text into numbers — everything typed in a terminal arrives as a string
     const volume = Number(options.volume);
     if (Number.isNaN(volume) || volume <= 0){
       return program.error('Error: Volume must be a positive number.');
@@ -112,8 +110,7 @@ program
     let dataset: ReturnType<typeof loadGoldenDataset>
 
     try {
-      // Prompt & dataset loaders throw descriptive errors for missing files, empty files, or invalid JSON lines
-      // Load prompt and dataset cleanly with file existence, non-empty, and sanitization checks
+      // Loaders throw descriptive errors for missing files, empty files, or invalid JSON lines
       prompt = loadAndSanitizePrompt(options.prompt);
       dataset = loadGoldenDataset(options.dataset);
     } catch (err:any) {
@@ -123,8 +120,6 @@ program
 
     const provider = options.fake ? fakeProvider : anthropicProvider;
 
-    // Execute audit loop
-    // Helper to restore terminal cursor on exit or signal
     const restoreCursor = () => {
       process.stdout.write('\x1b[?25h')
     }
@@ -132,14 +127,14 @@ program
     // Listen for Ctrl+C so the cursor is restored before exiting
     process.on('SIGINT', () => {
       restoreCursor(); // 1. Turn the cursor back on (\x1b[?25h)
-      process.stdout.write('\n'); // 2. Drop to a new line
-      process.exit(130); // 3. Stop the program immediately
+      process.stdout.write('\n'); 
+      process.exit(130); 
     })
 
     let results: AuditResult[]
 
     try {
-      // Hide cursor ONCE at the start of execution
+      // Hides the cursor for the whole run; restoreCursor() in the finally block below brings it back
       process.stdout.write('\x1b[?25l')
 
       results = await runAudit(
@@ -147,13 +142,12 @@ program
         dataset,
         prompt,
         MODEL_IDS,
-        passBar, // passBar (as a fraction) travels into the loop — early stopping needs it for its can-this-model-still-recover math.
+        passBar, // as a fraction — early stopping needs it to know if a model can still recover
         exactMatchScorer,
       );
     } catch (err: any) {
-      restoreCursor(); // Ensure cursor is back before exiting
+      restoreCursor(); 
 
-      // Catch network failures or timeouts cleanly
       const isNetworkOrTimeout = 
         err.name === 'APIConnectionError' || 
         err.name === 'APIConnectionTimeoutError' ||
@@ -167,16 +161,12 @@ program
       // Tells TypeScript: execution stops here for any other error
       return program.error(`Error: ${err.message}`);
     } finally {
-      // GUARANTEED Cleanup: Always restore cursor on success, error, or early return
+      // Runs no matter how the try block exits — success, error, or the early return above
       restoreCursor();
     }
-
-    // console.log(results)
     
-    // Summarize per-model performance
-    // The bridge between the loop and the report.
-    // One row per model: pile its records, count passes, build the row.
-    // passed = met the user's pass bar (default 100)
+    // Bridge between the audit loop and the report: one row per model,
+    // built by filtering this model's records out of the flat results list.
     const summaries = MODEL_IDS.map(modelId => {
       const records = results.filter(r => r.modelId === modelId);
       const passes = records.filter(r => r.pass).length;
@@ -210,16 +200,12 @@ program
         misses,
       };
     });
-  
-    // Calculate total audit cost and save real-miss fixtures
     const auditCost = calculateResultsCost(results);
     if (!options.fake) {
       saveMissFixtures(results.filter(r => !r.pass));
     }
-
-    // Render final CLI report
     printReport(summaries, auditCost, dataset.length);
   });
 
-//everything above only describes the command — parse reads what was typed and acts on it
+// Everything above only describes the command — parse() reads what was typed and acts on it
 program.parse();

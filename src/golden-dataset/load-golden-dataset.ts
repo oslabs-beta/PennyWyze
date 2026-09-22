@@ -7,26 +7,24 @@ export function loadGoldenDataset(path: string): GoldenExample[] {
     throw new Error(`Dataset file not found: '${path}`)
   }
 
-  // Read and split the dataset into individual JSONL entries.
   const fileContents = readFileSync(path, 'utf8');
-  const lines = fileContents.split(/\r?\n/);
+  const lines = fileContents.split(/\r?\n/); // handles both Unix and Windows line endings
   const examples: GoldenExample[] = [];
 
-  // Parse and validate each dataset entry.
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
-    if (line.trim() === '') continue; // skip blank lines
+    if (line.trim() === '') continue;
 
     let parsed;
     try {
       parsed = JSON.parse(line);
     } catch {
-      // bad line → stop immediately and identify the line
+      // Stop immediately and name the bad line, rather than skipping it and
+      // silently continuing with fewer examples than the user believes.
       throw new Error(
         `Line ${i + 1} of your golden dataset is not valid JSON.`,
       );
     }
-    // validate
     const result = goldenExampleSchema.safeParse(parsed);
 
     if (!result.success) {
@@ -38,7 +36,6 @@ export function loadGoldenDataset(path: string): GoldenExample[] {
         `Line ${i + 1} of your golden dataset is invalid:\n${issues}`,
       );
     }
-
     examples.push(result.data);
   }
 
@@ -46,6 +43,5 @@ export function loadGoldenDataset(path: string): GoldenExample[] {
   if (examples.length === 0) {
     throw new Error(`Dataset file '${path}' is empty. Provide at least 1 test example.`);
   }
-  
   return examples;
 }

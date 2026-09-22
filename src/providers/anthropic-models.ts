@@ -1,6 +1,7 @@
-// src/providers/anthropic-models.ts
-
 export const ANTHROPIC_MODELS = {
+  // Prices are dollars per million tokens (divided out in cost/calculator.ts).
+  // Source: docs/api-validation.md — verify against Anthropic's current
+  // pricing before editing, these change.
   opus: {
     id: 'claude-opus-5',
     inputPrice: 5,
