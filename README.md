@@ -1,63 +1,78 @@
-# PennyWyze
+<div align='center'>
+
+<img src="./assets/banner.png" alt="PennyWyze" width="100%"/>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D18-339933.svg)](#install--setup)
+[![npm](https://img.shields.io/badge/npm-pennywyze-CB3837.svg)](https://www.npmjs.com/package/pennywyze)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing--development)
+[![GitHub](https://img.shields.io/badge/GitHub-repo-181717.svg)](https://github.com/oslabs-beta/PennyWyze)
 
-**DON'T PAY FOR WASTED INTELLIGENCE**
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+![Commander](https://img.shields.io/badge/Commander.js-000000)
+![Zod](https://img.shields.io/badge/Zod-3E67B1)
+[![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
+![Claude](https://img.shields.io/badge/Claude-D97757)
 
-PennyWyze audits which Claude tier — Opus, Sonnet, or Haiku — is the cheapest
-one that still passes YOUR quality checks. Point it at your prompt and a golden
-dataset of real examples with known-correct answers; it runs every example
-against all three tiers, grades each answer, and prints a report: each model's
-score, its projected monthly cost at your volume, what the audit itself cost,
-and a verdict naming the cheapest passing model and what switching saves you.
+</div>
+
+#
+
+Most teams default to the smartest, most expensive Claude tier because checking whether a cheaper one would work means building a whole test harness — so they never check, and quietly overpay every month.
+
+PennyWyze is that evaluation harness, already built. Point it at your real prompt and a handful of examples you know the right answer to; it runs all three Claude tiers against them, grades every answer, prices each tier from real token usage, and tells you the cheapest one that still passes.
+
+**What makes it different:**
+- Costs are measured from real API token counts, never estimated
+- Grading is strict on purpose — a correct answer wearing decoration passes, a right answer buried in a sentence doesn't
+- A tier that's mathematically already failed stops spending immediately, mid-run
+- Verdicts held identical across 5 consecutive real audits
 
 ## Contents
 
-- [Install & Setup](#install--setup)
-- [Run an Audit](#run-an-audit)
-- [Grading Rules](#grading-rules)
+- [Getting Started](#getting-started)
+- [See It Run](#see-it-run)
+- [Flags](#flags)
+- [How It Grades](#how-it-grades)
 - [Repeatability](#repeatability)
-- [Golden Dataset Format](#golden-dataset-format)
 - [Troubleshooting](#troubleshooting)
-- [Status](#status)
+- [Contributing & Development](#contributing--development)
+- [Roadmap](#roadmap)
+- [Contributors](#contributors)
+- [License](#license)
 
-## Install & Setup
+## Getting Started
 
-Requires Node 18+.
-
-```bash
-git clone https://github.com/oslabs-beta/PennyWyze.git
-cd PennyWyze
-npm install
-```
-
-To use `pennywyze` as a plain installed command (no npm prefix):
+Requires [Node 18+](https://nodejs.org/) on macOS, Linux, or Windows.
 
 ```bash
-npm run build
-npm link
+npm install -g pennywyze
 ```
 
-PennyWyze runs on your own Anthropic API key — nothing is uploaded anywhere.
-Create a `.env` file at the project root:
+Add your key — get one at [console.anthropic.com](https://console.anthropic.com/), then create a `.env` file wherever you're running the command from:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-Already using Anthropic? You're done. (No key yet? Add `--fake` to any command
-to run the whole pipeline on a built-in fake provider — free and instant.)
+Write a prompt (`prompt.md`) — the exact instructions your feature already sends to Claude — and a golden dataset: real inputs paired with the answer you know is right.
 
-## Run an Audit
-
-```bash
-pennywyze audit --prompt examples/prompt.md --dataset examples/demo-dataset.jsonl --pass-rate 90
+```jsonl
+{"input": "I was charged twice this month", "expected": "billing"}
+{"input": "The app crashes on upload", "expected": "technical"}
 ```
 
-(Without `npm link`, the dev path works too:
-`npm run dev -- audit --prompt ... --dataset ...` — the lone `--` separates
-npm's flags from PennyWyze's.) Output:
+Then run it:
+
+```bash
+pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
+```
+
+## See It Run
+
+<img src="./assets/demo.gif" alt="PennyWyze running a real audit" width="500"/>
+
+*(Sped up for length — a real 50-example audit takes about 3 minutes. The final report and verdict play at real speed.)*
 
 ```
  ✓ opus audited — 50 questions
@@ -68,64 +83,58 @@ npm's flags from PennyWyze's.) Output:
 ┌───────────────────────────┬────────────┬────────────────┐
 │ MODEL                     │  ACCURACY  │ EST. COST / MO │
 ├───────────────────────────┼────────────┼────────────────┤
-│ claude-opus-5             │ 48/50 PASS │   $190.49 / mo │
+│ claude-opus-5             │ 48/50 PASS │   $200.94 / mo │
 ├───────────────────────────┼────────────┼────────────────┤
-│ claude-sonnet-5           │ 49/50 PASS │    $74.94 / mo │
+│ claude-sonnet-5           │ 49/50 PASS │    $77.92 / mo │
 ├───────────────────────────┼────────────┼────────────────┤
-│ claude-haiku-4-5-20251001 │ 48/50 PASS │    $26.26 / mo │
+│ claude-haiku-4-5-20251001 │ 49/50 PASS │    $26.26 / mo │
 └───────────────────────────┴────────────┴────────────────┘
 
   FAILED TEST DETAILS
 -------------------------------------------------------
+
+ ● claude-opus-5
+   ├─ Input:    "The site keeps logging me out every five minutes, super a..."
+   │  Received: "account"
+   │  Expected: "technical"
+   │
+   └─ Input:    "I can't log in and honestly at this point I just want my ..."
+      Received: "account"
+      Expected: "billing"
+
+-------------------------------------------------------
+
+ ● claude-sonnet-5
+   └─ Input:    "The site keeps logging me out every five minutes, super a..."
+      Received: "account"
+      Expected: "technical"
+
+-------------------------------------------------------
+
  ● claude-haiku-4-5-20251001
    └─ Input:    "I can't log in and honestly at this point I just want my ..."
       Received: "account"
       Expected: "billing"
+
 -------------------------------------------------------
 
- VERDICT  Switch to claude-haiku-4-5-20251001 - save ~$164.23/mo.
+ VERDICT  Switch to claude-haiku-4-5-20251001 - save ~$174.68/mo.
 
   ℹ Audit cost: $0.15
 ```
 
-Each model runs your real prompt against your real examples, one API call per
-question — a live progress bar shows the audit working. Models that can't
-reach the pass bar stop early, so failed tiers don't keep spending your money.
-Misses are printed for every model — even passing ones — so you see exactly
-what the cheaper tier gets wrong before you switch.
-
-### Flags
+## Flags
 
 | Flag | Required | Default | What it does |
 |---|---|---|---|
-| `--prompt <filepath>` | yes | — | your instructions file, sent with every call |
-| `--dataset <filepath>` | yes | — | your golden dataset (format below) |
-| `--volume <count>` | no | 100000 | your messages per month — scales the cost projections, never the verdict |
-| `--pass-rate <percent>` | no | 100 | minimum score to count as passing, 1–100 (e.g. 90 = one miss in ten is fine) |
-| `--fake` | no | off | run against a built-in fake provider: no API key, no cost, instant |
+| `--prompt <filepath>` | yes | — | your instructions file |
+| `--dataset <filepath>` | yes | — | your golden dataset |
+| `--volume <count>` | no | 100000 | messages/month — scales cost, never the verdict |
+| `--pass-rate <percent>` | no | 100 | minimum score to pass, 1–100 |
 
-### A Note on Pricing
+## How It Grades
 
-Per-token rates for all three tiers are hardcoded from Anthropic's published
-pricing. Anthropic changes these periodically — if a monthly-cost projection
-looks off, check current pricing before trusting it at scale. The verdict
-(which tier is cheapest) is far more robust to a stale rate than the exact
-dollar figure is.
-
-## Grading Rules
-
-Answers are cleaned before comparison — surrounding quotes, code fences,
-capitalization, and trailing punctuation are stripped from both sides — then
-compared with strict equality: a model's cleaned output must exactly equal the
-expected label rather than merely containing it. A correct answer wearing
-decoration passes; a wrong answer never does.
-
-Strictness is a policy: an answer buried in a sentence ("The answer is
-billing") fails, because ignoring "reply with only the word" is a real
-compliance miss for a production task.
-
-Evaluation defaults to requiring a 100% score to pass; `--pass-rate` loosens
-the bar.
+Both sides are cleaned first (quotes, casing, code fences, trailing punctuation stripped), then compared **exactly** — not "contains." A decorated correct answer passes; a wrong answer never does, and an answer buried in a sentence fails on purpose, because ignoring "respond with one word" is a real bug in production. The winner is always the *cheapest tier that passed* — never just the cheapest tier.
 
 ## Repeatability
 
@@ -135,45 +144,6 @@ slightly on the newest models (adaptive thinking is non-deterministic), which
 moves cost projections a few percent between runs — but scores and the verdict
 held constant in every trial. Re-run/threshold logic deliberately omitted:
 the data says it isn't needed.
-
-## Golden Dataset Format
-
-**What a golden dataset is:** a small file of real examples from your AI
-feature, each paired with the answer you consider correct — real inputs your
-system actually receives, and the exact output you'd want back. It's the
-answer key PennyWyze grades every model against: your quality bar, written
-down.
-
-**Don't have one? Build it in ~20 minutes:** pull 20–30 real inputs from your
-logs (support tickets, user messages, whatever your feature processes), run
-each through your current setup or label it by hand, and keep only the ones
-where you're confident what the right answer is. Real examples beat invented
-ones — invented inputs test the model on questions your users never ask.
-
-Golden dataset files use two fields:
-
-- `input` — the prompt or question sent to the AI.
-- `expected` — the correct answer used to evaluate the AI's response.
-
-All dataset entries must use these exact field names.
-
-The file must be **JSONL** (JSON Lines): one complete JSON object per
-line — no wrapping array, no commas between lines.
-
-```jsonl
-{"input": "My card was charged twice", "expected": "billing"}
-{"input": "App crashes on upload", "expected": "technical"}
-```
-
-**JSONL vs regular JSON:** regular JSON is one structure parsed all at
-once — a single missing comma breaks the whole file with no location
-given. JSONL parses line-by-line, which is what lets PennyWyze report
-"line 3 is invalid" instead of "something's wrong somewhere." Have
-regular JSON? Convert first — each array entry becomes its own line.
-
-Bad lines stop the audit immediately with the line number — no API money
-is ever spent on a broken dataset. Verdicts get more trustworthy with more
-examples; under 30, the report says so.
 
 ## Troubleshooting
 
@@ -192,20 +162,56 @@ If you hit one of these, the fix is usually immediate:
 | `Error: Pass rate must be a number between 1 and 100.` | `--pass-rate` was outside 1–100 | Pass a percentage in that range |
 | `Error: Could not connect to Anthropic API. Check your network connection.` | A network or timeout failure reaching Anthropic | Check your connection and retry, or run with `--fake` to confirm the rest of the pipeline works |
 
-No key yet, or want to sanity-check a prompt/dataset pair without spending
-anything? Add `--fake` to any command — it runs the identical pipeline
-against a built-in stand-in provider.
+## Contributing & Development
 
-## Status
+Contributions are welcome — fork the repo, branch, commit, and open a PR against `main`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
-Built at OSLabs. Working today: real audits against live Claude models,
-grading with cleanup, early stopping, configurable pass bar, live progress,
-misses reporting, real cost projections and audit self-cost, free fake mode,
-installable CLI via npm link. Publishing to the npm registry coming soon.
+Build from source instead of installing from npm:
 
-Not yet on the audit ladder: Anthropic's Fable 5 tier. PennyWyze currently
-audits Opus, Sonnet, and Haiku only.
+```bash
+git clone https://github.com/oslabs-beta/PennyWyze.git
+cd PennyWyze
+npm install
+npm run dev -- audit --prompt examples/prompt.md --dataset examples/demo-dataset.jsonl   # run without building
+npm test                                                                                  # run the test suite
+```
+
+**Developing without an API key or cost:** add `--fake` to any command to run the full pipeline against a free, instant, built-in stand-in provider instead of the real Anthropic API. This is how the tool gets built and tested day to day — real API calls are only for real audits.
+
+**Extending PennyWyze:** the audit loop is built around two swappable contracts — `ModelProvider` (anything that can answer a question and report what it cost, see `src/providers/provider.ts`) and `Scorer` (anything that can grade an answer true or false, see `src/scorers/scorer.ts`). Most new features — a new model provider, a new grading strategy — are a single new file implementing one of these two interfaces, not a change to the core loop.
+
+## Roadmap
+
+| Feature | Status |
+|---|---|
+| Real audits against live Claude models | ✅ |
+| Strict, decoration-tolerant grading | ✅ |
+| Early stopping — never pay for a run that's already lost | ✅ |
+| Configurable pass bar (`--pass-rate`) | ✅ |
+| Real cost projections + audit self-cost | ✅ |
+| Free offline `--fake` mode for development | ✅ |
+| Published to the npm registry | ✅ |
+| Claude Fable 5 as a fourth tier | 🙏🏻 |
+| Structured JSON output | 🙏🏻 |
+| JSON grading (deterministic, for structured answers) | 🙏🏻 |
+| Shareable HTML report | 🙏🏻 |
+| GitHub Action — re-audit in CI against a committed baseline | 🙏🏻 |
+| Flexible dataset input formats (CSV, etc.) | 🙏🏻 |
+| `pennywyze init` — guided golden-dataset builder | 🙏🏻 |
+| Cross-provider audits — OpenAI, Google, and Grok, run in parallel per provider | 🙏🏻 |
+| LLM-as-judge — exact match runs first, the judge only sees the rest, and reports how often it agrees with your own grading | 🙏🏻 |
+| Prompt trimming — cheaper prompts, not just cheaper models | 🙏🏻 |
+
+✅ = Ready to use · ⏳ = In progress · 🙏🏻 = Looking for contributors
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
+## Contributors
+
+- Olivia McKelvey: [GitHub 🐙](https://github.com/Oliviamckelvey) | [LinkedIn 🖇️](https://www.linkedin.com/in/mckelveyolivia/)
+- Edward Zgonc: [GitHub 🐙](https://github.com/Edward-Zgonc) | [LinkedIn 🖇️](https://www.linkedin.com/in/edward-zgonc/)
+- Maia Bard: [GitHub 🐙](https://github.com/MaiaKBard) | [LinkedIn 🖇️](https://www.linkedin.com/in/maiakbard/)
 
 ## License
 
-MIT
+Distributed under the MIT License. See [LICENSE](LICENSE) for details.
