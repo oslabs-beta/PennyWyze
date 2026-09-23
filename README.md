@@ -180,6 +180,8 @@ npm test                                                                        
 
 **Extending PennyWyze:** the audit loop is built around two swappable contracts — `ModelProvider` (anything that can answer a question and report what it cost, see `src/providers/provider.ts`) and `Scorer` (anything that can grade an answer true or false, see `src/scorers/scorer.ts`). Most new features — a new model provider, a new grading strategy — are a single new file implementing one of these two interfaces, not a change to the core loop.
 
+Questions or Code of Conduct concerns: [pennywyzeosp@gmail.com](mailto:pennywyzeosp@gmail.com)
+
 ## Roadmap
 
 | Feature | Status |
