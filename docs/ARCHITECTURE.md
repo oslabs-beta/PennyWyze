@@ -5,20 +5,37 @@ A tour of PennyWyze's source, in the order one audit actually travels through it
 ## The pipeline, at a glance
 
 ```
-cli.ts (parse flags)
+cli.ts (parse + validate flags)
   → loaders (validate prompt + dataset)
   → provider (fake or real)
-  → audit.ts (the loop)
+  → audit.ts (the loop) → progress.ts (draws the bar)
   → scorer (grade each answer)
-  → cost/calculator.ts (price it)
-  → report.ts (print the verdict)
+  → summarize.ts (results → one row per model) → cost/calculator.ts (price it)
+  → report.ts (print the table and verdict)
 ```
+
+Two boundaries are worth knowing before you move code across them:
+
+- **`audit.ts` and `summarize.ts` never touch the terminal.** The loop reports
+  progress through callbacks it is handed; the summary returns numbers, not
+  formatted strings. Everything that writes to stdout lives in `cli.ts`,
+  `progress.ts` and `report.ts`. This is what keeps both testable, and what a
+  non-CLI caller would reuse.
+- **Incomplete is not the same as wrong.** A call that failed, was truncated,
+  or was declined never produced an answer, so it is recorded as `incomplete`
+  and excluded from scores, misses and cost — never counted as a miss.
 
 ## `src/cli.ts` — the entry point
 
-The only file that imports from every layer of the pipeline. Defines the `audit` command with Commander, validates and converts the CLI flags (everything typed into a terminal arrives as text, so `--volume` and `--pass-rate` are cast to numbers and range-checked here), loads the prompt and dataset, picks the fake or real provider, runs the audit, turns the raw per-question results into per-model summaries, and hands them to the report.
+The only file that imports from every layer of the pipeline. Defines the `audit` command with Commander, validates and converts the CLI flags (everything typed into a terminal arrives as text, so `--volume` and `--pass-rate` are cast to numbers and range-checked here, and `--current` is checked against the known model ids so a typo fails loudly instead of silently changing the savings baseline), loads the prompt and dataset, picks the fake or real provider, runs the audit, and hands the summarized results to the report.
+
+It also owns the terminal mechanics the rest of the code deliberately avoids: hiding and restoring the cursor, and the `SIGINT` handler that puts the cursor back before exiting on Ctrl+C.
 
 **Gotcha:** the two `try/catch` blocks in the action handler are separate on purpose. The first catches problems with the user's input (bad files); the second catches problems with the run itself (network failures). They produce different error messages because they're different kinds of failure.
+
+## `src/golden-dataset/load-prompt.ts` — the prompt loader
+
+Reads the prompt file and returns it verbatim, minus a UTF-8 BOM and zero-width characters, which editors and copy-paste insert invisibly and which would otherwise be sent to the model as part of the instructions. Nothing else is interpreted or reformatted: whatever the user wrote *is* the prompt, and rewriting it would mean auditing something other than their real instructions. Empty files and missing paths throw with a message naming the path.
 
 ## `src/golden-dataset/schema.ts` — the dataset contract
 
@@ -32,15 +49,24 @@ Reads the dataset file, splits it into lines, and validates each one against the
 
 ## `src/providers/provider.ts` — the model-caller contract
 
-One interface, `ModelProvider`, with one method: `run(modelId, systemPrompt, userInput)` returns `{ text, inputTokens, outputTokens }`. This is the seam that lets a free fake stand-in and the real Anthropic API be interchangeable. The audit loop is written against this shape, not against any specific implementation.
+One interface, `ModelProvider`, with one method: `run(modelId, systemPrompt, userInput)` returns `{ text, inputTokens, outputTokens, stopReason }`. This is the seam that lets a free fake stand-in and the real Anthropic API be interchangeable. The audit loop is written against this shape, not against any specific implementation.
+
+`stopReason` is the one field that isn't obvious. It exists so the loop can tell a *wrong* answer apart from one that was never finished: `end_turn` is a real attempt, while `max_tokens` (cut off) and `refusal` (declined) are not, and grading either as a miss would quietly lower a model's score for something it never got wrong.
 
 ## `src/providers/anthropic-models.ts` — pricing and model IDs
 
-A single object mapping each tier (`opus`, `sonnet`, `haiku`) to its real model ID and its input/output price per million tokens. This is the one place to edit when Anthropic changes pricing or model IDs. The CLI derives its list of models to audit from this object, so the report's row order (opus, then sonnet, then haiku) comes from this object's own key order, nothing sorts it explicitly.
+A single object mapping each tier (`opus`, `sonnet`, `haiku`) to its model id, display label, input/output price per million tokens, request timeout, and reasoning effort. This is the one place to edit when Anthropic changes pricing or model ids. The CLI derives its list of models to audit from this object, so the report's row order (opus, then sonnet, then haiku) comes from this object's own key order, nothing sorts it explicitly. `MODELS_BY_ID` is the same data keyed by api id, so per-call lookups don't rescan the object.
+
+Two fields carry decisions rather than facts:
+
+- **`effort`** caps how much a model deliberates. On Claude 5 models thinking is on by default and thinking tokens bill at the *output* rate, so without a cap the pricier tiers are charged for reasoning a one-word classification never needed — skewing the very comparison this tool exists to produce. It is `null` for Haiku 4.5, which rejects `output_config.effort` with a 400 and has no default thinking to cap.
+- **`timeoutMs`** is per model because a thinking tier and Haiku don't deserve the same ceiling. A single short client-level timeout made slow-but-fine answers look like network failures.
 
 ## `src/providers/fake-provider.ts` — the free stand-in
 
 Implements `ModelProvider` but never makes a network call. Cycles through a short list of canned answers, deliberately including a correct-but-decorated one (`"billing"` in quotes) so development exercises the grader's cleanup logic without spending anything. This is what `--fake` swaps in, and it's how the entire pipeline gets built and tested at zero cost.
+
+Exported as a factory, `createFakeProvider()`, plus one shared `fakeProvider` instance for the CLI. Position in the answer list is state: a single module-level counter leaks between tests in the same file, so which answers a test received depended on what ran before it. Tests should always build their own.
 
 ## `src/providers/anthropic-provider.ts` — the real caller
 
@@ -50,20 +76,38 @@ Implements `ModelProvider` against the real Anthropic API. A few non-obvious dec
 - `system` is a top-level field on Anthropic's API, not a message with a system role.
 - The response's `content` array is searched for the first `text` block rather than assumed to be at index 0, because Opus's adaptive thinking can insert a `thinking` block first.
 - `max_tokens` is set generously (1000) so that thinking doesn't consume the budget before the model emits a real answer.
+- Effort and timeout come from the model catalog, not from constants here. Effort is spread in conditionally so that a model which rejects the parameter sends no `output_config` field at all.
+- `maxRetries` is left at the SDK default behaviour (4) because it is currently the *only* retry layer. If we add our own backoff, this must go to 0 first, or the two multiply instead of one replacing the other.
 
 ## `src/scorers/scorer.ts` — the grading contract
 
 One interface, `Scorer`, with one method: `score(actual, expected)` returns `Promise<boolean>`. It's async even though the current grader never awaits anything, on purpose: a future LLM-as-judge grader will need to make its own API call, and declaring the contract async now means it drops into this exact socket later without touching the audit loop.
 
+Known limitation, left deliberately unaddressed: a judge would also need the original *input* (not just the two answers), and would want to return a reason and its own token cost. That's a real change to this interface, and it should be made by whoever builds the judge, when the right shape is knowable, rather than guessed at now.
+
 ## `src/scorers/exact-match-scorer.ts` — the real grader
 
-Normalizes both sides (strip code fences, quotes, capitalization, trailing punctuation) and then requires exact equality, not "contains." A correct answer wearing decoration passes; a right answer buried in a sentence still fails, because ignoring an output-format instruction is a real production bug, not a technicality. This file's tests are partly seeded by `tests/scorers/fixtures/real-misses.jsonl`, which `cli.ts` grows automatically from real audits, so the grader is validated against real Claude output over time, not just invented examples.
+Normalizes both sides (strip code fences, quotes, capitalization, trailing punctuation) and then requires exact equality, not "contains." A correct answer wearing decoration passes; a right answer buried in a sentence still fails, because ignoring an output-format instruction is a real production bug, not a technicality. This file's tests are partly seeded by `tests/scorers/fixtures/real-misses.jsonl` — real wrong answers captured from real audits, which `tests/scorers/real-misses.test.ts` replays to assert each one still scores as a miss. Loosen the normalization too far and a genuine miss starts passing, and that test goes red. The file grows only when someone opts in with `--capture-misses <path>`; it is never written automatically, because a relative default path lands in whatever directory the installed CLI happened to be run from.
 
 ## `src/audit.ts` — the loop
 
-Everything upstream feeds this file; everything downstream reads what it produces. For each model, for each question, it calls the provider, grades the answer with the scorer, and pushes one record onto a results list. Both the provider and the scorer are received as parameters, never imported directly, which is the entire swap mechanism for fake-vs-real and exact-match-vs-future-grader.
+Everything upstream feeds this file; everything downstream reads what it produces. For each model, for each question, it calls the provider, grades the answer with the scorer, and pushes one record onto a results list. The provider, the scorer, and the progress reporter are all received as parameters, never imported directly, which is the entire swap mechanism for fake-vs-real, exact-match-vs-future-grader, and terminal-vs-silent.
+
+A call that throws does not end the audit. It is recorded as `incomplete`, that model stops, and the remaining models still run — every result already collected has been paid for, and one provider having a bad minute shouldn't discard it.
 
 Before each model's run, it computes how many misses that model can absorb and still clear the pass bar. The moment a model's failure count exceeds that number, the loop breaks for that model rather than finishing the remaining questions, since it's already mathematically impossible for it to pass.
+
+## `src/progress.ts` — the progress bar
+
+The terminal implementation of the audit's `AuditProgress` hooks. Every ANSI escape for the live ticker lives here: `\r` to return to the start of the line, `\x1b[K` to clear to end of line so a redraw doesn't need padding spaces, and a trailing `\n` on the per-model line to release it so the next model starts fresh. Nothing in `audit.ts` knows any of this exists.
+
+## `src/summarize.ts` — results into rows
+
+Turns the flat list of per-question results into one row per model: pass count, whether early stopping cut it short, how many calls came back incomplete, projected monthly cost, whether it cleared the bar, and its misses.
+
+Returns numbers and booleans, never formatted strings, for two reasons: tests can assert on `passes === 48` instead of matching text with invisible colour codes in it, and a non-terminal caller needs the values rather than a rendering of them.
+
+**Gotcha:** a model with *any* incomplete call can never be reported as passed. Part of its score is unknown, so "it passed" would be a claim the data can't support — it shows as `N/A`, not `FAIL`, and is excluded from the verdict.
 
 ## `src/cost/calculator.ts` — the pricing math
 
@@ -73,10 +117,24 @@ One function, `costOfCall`, that turns token counts and per-token rates into a d
 
 The only part of the tool a user ever sees. Prints the comparison table, the miss details for any model that had at least one, and the verdict. The verdict logic is the one rule this file owns and the easiest to get subtly wrong: it names the cheapest model that *passed*, never just the cheapest model outright, so a fast wrong answer can never win.
 
+Two rules that were each a bug once:
+
+- **Zero savings is not a recommendation.** If the cheapest passing model isn't actually cheaper than the baseline, the verdict says the user is already on the optimal tier instead of advising them to "switch" to what they already run.
+- **The baseline is `--current` when given.** Without it, savings fall back to the most expensive tier audited, which overstates them for anyone not already on that tier — so the report says so explicitly rather than letting the number stand unqualified.
+
 ## Tests
 
-Vitest covers the loader, the audit loop's shape and early-stopping math, the cost calculator, and the exact-match scorer. Cost calculator tests use hand-computed expected values on purpose, since deriving expectations from the same code being tested would prove nothing.
+Vitest covers the loaders, the audit loop's shape and early-stopping math, its incomplete-call handling and progress reporting, the summary rollup, the cost calculator, the report's verdict rules, and the exact-match scorer — including a replay of real captured misses.
+
+Two conventions worth keeping:
+
+- **Hand-computed expected values.** Cost tests spell out the arithmetic rather than deriving it from the same code under test, which would prove nothing.
+- **Tests are typechecked.** `tsconfig.json` covers only `src`, so `tsconfig.test.json` exists to typecheck `src` and `tests` together; `npm run typecheck` runs both. Without it Vitest happily runs tests whose fixtures no longer match the types they claim to be, which is exactly what was happening before it was added.
 
 ## Scripts
 
-`scripts/provider-validation/` holds manual, one-off scripts used to probe a real provider's API directly (model IDs, accepted parameters, response shape) before writing a real `ModelProvider` implementation against it. These are not automated tests, they cost real money, and they're meant to be run and read by a human, not by CI.
+`scripts/api-test.ts` is a manual, one-off script for probing the real API directly (model ids, accepted parameters, response shape). It is not an automated test, it costs real money, and it's meant to be run and read by a human. It lives outside `src/` on purpose: it makes a live API call at import time, and inside the compiled tree it was being typechecked on every build and was easy to open by accident.
+
+## CI
+
+`.github/workflows/ci.yml` runs typecheck, tests and build on every pull request, on Node 20 and 22. `npm run format` applies Prettier; `format:check` is not in CI yet because a repo-wide reformat needs to land as its own pull request first.

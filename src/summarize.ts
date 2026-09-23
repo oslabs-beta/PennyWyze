@@ -1,5 +1,5 @@
 import type { AuditResult } from './audit.js';
-import { ANTHROPIC_MODELS } from './providers/anthropic-models.js';
+import { MODELS_BY_ID } from './providers/anthropic-models.js';
 import { costOfCall } from './cost/calculator.js';
 
 export type Miss = {
@@ -14,6 +14,8 @@ export type ModelSummary = {
   total: number;
   /** True when early stopping cut this model short of the full dataset. */
   stopped: boolean;
+  /** Calls that never produced a gradeable answer — failures, truncations. */
+  incomplete: number;
   monthlyCost: number;
   passed: boolean;
   misses: Miss[];
@@ -22,9 +24,7 @@ export type ModelSummary = {
 /** Total USD spent on the given calls, priced per model from real token counts. */
 export const calculateResultsCost = (results: AuditResult[]): number =>
   results.reduce((sum, result) => {
-    const model = Object.values(ANTHROPIC_MODELS).find(
-      m => m.id === result.modelId,
-    );
+    const model = MODELS_BY_ID.get(result.modelId);
     if (!model) return sum;
 
     return (
@@ -55,23 +55,36 @@ export const summarize = (
 ): ModelSummary[] =>
   modelIds.map(modelId => {
     const records = results.filter(r => r.modelId === modelId);
-    const passes = records.filter(r => r.pass).length;
 
-    // Cost per call is averaged over the calls actually made, so an
+    // Only graded answers say anything about quality or cost. An incomplete
+    // call is missing data, not a wrong answer.
+    const graded = records.filter(r => r.status === 'graded');
+    const incomplete = records.length - graded.length;
+    const passes = graded.filter(r => r.pass).length;
+
+    // Cost per call is averaged over the calls actually graded, so an
     // early-stopped model still projects a fair per-message rate.
-    const averageCostPerCall = calculateResultsCost(records) / records.length;
+    const averageCostPerCall = graded.length
+      ? calculateResultsCost(graded) / graded.length
+      : 0;
 
     return {
       name: modelId,
       passes,
       total: datasetSize,
       stopped: records.length < datasetSize,
+      incomplete,
       monthlyCost: averageCostPerCall * volume,
-      // Measured against calls made, not dataset size. Early stopping only
-      // triggers once a model can no longer reach the bar, so a stopped model
-      // can never pass this check.
-      passed: passes / records.length >= passBar,
-      misses: records
+      // A model with any incomplete call cannot be recommended: part of its
+      // score is unknown, so "it passed" would be a claim the data can't
+      // support. Otherwise measured against calls made, not dataset size —
+      // early stopping only fires once the bar is already unreachable, so a
+      // stopped model can never pass this check.
+      passed:
+        incomplete === 0 &&
+        graded.length > 0 &&
+        passes / graded.length >= passBar,
+      misses: graded
         .filter(r => !r.pass)
         .map(r => ({
           input: r.question,

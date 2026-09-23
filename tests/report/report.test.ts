@@ -7,6 +7,7 @@ const baseModel = (overrides: Partial<ModelSummary> = {}): ModelSummary => ({
   passes: 50,
   total: 50,
   stopped: false,
+  incomplete: 0,
   monthlyCost: 100,
   passed: true,
   misses: [],
@@ -70,6 +71,46 @@ describe('printReport', () => {
     const output = printedOutput()
     expect(output).toContain('No cheaper model meets quality criteria.')
     expect(output).not.toContain('Switch to')
+  })
+
+  it('measures savings against --current, not the priciest model audited', () => {
+    const models = [
+      baseModel({ name: 'expensive', monthlyCost: 900, passed: true }),
+      baseModel({ name: 'what-we-run-today', monthlyCost: 300, passed: true }),
+      baseModel({ name: 'cheapest', monthlyCost: 100, passed: true }),
+    ]
+
+    printReport(models, 0.15, 50, 'what-we-run-today')
+
+    const output = printedOutput()
+    // 300 - 100, not 900 - 100: the user never paid the 900.
+    expect(output).toContain('save ~$200.00/mo vs what-we-run-today')
+  })
+
+  it('says nothing beats what the user already runs, when that is true', () => {
+    const models = [
+      baseModel({ name: 'what-we-run-today', monthlyCost: 100, passed: true }),
+      baseModel({ name: 'pricier', monthlyCost: 900, passed: true }),
+    ]
+
+    printReport(models, 0.15, 50, 'what-we-run-today')
+
+    const output = printedOutput()
+    expect(output).toContain('You are currently on the optimal pricing tier')
+    expect(output).not.toContain('Switch to')
+  })
+
+  it('flags an incomplete model as ineligible rather than failed', () => {
+    const models = [
+      baseModel({ name: 'had-errors', monthlyCost: 10, passed: false, incomplete: 3 }),
+      baseModel({ name: 'clean-run', monthlyCost: 500, passed: true }),
+    ]
+
+    printReport(models, 0.15, 50)
+
+    const output = printedOutput()
+    expect(output).toContain('3 calls did not complete')
+    expect(output).not.toContain('Switch to had-errors')
   })
 
   it('warns when the dataset is under 30 examples', () => {
