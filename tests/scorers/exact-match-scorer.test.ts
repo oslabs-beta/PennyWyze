@@ -1,5 +1,5 @@
 import { describe, it , expect } from 'vitest'
-import { exactMatchScorer } from "../../src/scorers/exact-match-scorer"
+import { exactMatchScorer } from '../../src/scorers/exact-match-scorer.js'
 
 describe("exactMatchScorer", () => {
   it("passes a quoted answer", async () => {

@@ -1,13 +1,14 @@
 import Table from 'cli-table3';
 import chalk from 'chalk';
 
-type ModelSummary = {
-  name: string;
-  score: string;
-  monthlyCost: number;
-  passed: boolean;
-  misses: { input: string; answer: string; expected: string }[];
-};
+import type { ModelSummary } from './summarize.js';
+
+// Formatting lives here, not in summarize() — the summary carries counts,
+// this turns them into the "48/50 (stopped)" the table shows.
+const formatScore = (model: ModelSummary): string =>
+  model.stopped
+    ? `${model.passes}/${model.total} ${chalk.dim('(stopped)')}`
+    : `${model.passes}/${model.total}`;
 
 export const printReport = (models: ModelSummary[], auditCost: number, datasetSize: number) => {
   console.log('\n' + chalk.bold.cyan('  PENNYWYZE AUDIT REPORT'))
@@ -28,7 +29,7 @@ export const printReport = (models: ModelSummary[], auditCost: number, datasetSi
 
       table.push([
         chalk.white(model.name),
-        `${model.score} ${statusTag}`,
+        `${formatScore(model)} ${statusTag}`,
         `$${model.monthlyCost.toFixed(2)} / mo`
       ])
   }
