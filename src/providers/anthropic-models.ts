@@ -11,20 +11,30 @@ export const ANTHROPIC_MODELS = {
   // whichever tier thinks most. Omitted where the API rejects the parameter.
   opus: {
     id: 'claude-opus-5',
+    label: 'opus',
     inputPrice: 5,
     outputPrice: 25,
     effort: 'low',
+    // Thinking models can take a while on a hard input; 20s was cutting real
+    // answers off and surfacing them as network errors.
+    timeoutMs: 120_000,
   },
   sonnet: {
     id: 'claude-sonnet-5',
+    label: 'sonnet',
     inputPrice: 2,
     outputPrice: 10,
     effort: 'low',
+    timeoutMs: 120_000,
   },
   haiku: {
-    id: 'claude-haiku-4-5-20251001',
+    // Canonical id — the dated variant 'claude-haiku-4-5-20251001' is not the
+    // published form and shouldn't be pinned here.
+    id: 'claude-haiku-4-5',
+    label: 'haiku',
     inputPrice: 1,
     outputPrice: 5,
+    timeoutMs: 60_000,
     // No effort: Claude Haiku 4.5 rejects output_config.effort with a 400.
     // It also has no default thinking to cap, so there is nothing to equalize.
     effort: null,

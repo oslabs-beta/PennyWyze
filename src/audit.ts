@@ -2,6 +2,7 @@ import type { ModelProvider } from './providers/provider.js'
 import type { GoldenExample } from './golden-dataset/schema.js';
 import chalk from 'chalk'
 import type { Scorer } from './scorers/scorer.js';
+import { MODELS_BY_ID } from './providers/anthropic-models.js';
 
 export type AuditResult = {
   modelId: string;
@@ -22,14 +23,13 @@ export type AuditResult = {
   note?: string;
 }
 
-// Matches by substring, so it only recognizes opus/sonnet/haiku today.
-// Falls back to 'haiku' for anything else — display label only, doesn't
-// affect grading or cost, but will mislabel a future 4th tier (see roadmap).
-const getTierName = (modelId: string):string => {
-  if (modelId.includes('opus')) return 'opus'
-  if (modelId.includes('sonnet')) return 'sonnet'
-  return 'haiku'
-}
+// Display label only — no effect on grading or cost. Read from the catalog
+// rather than sniffed from the id, because substring matching silently
+// mislabels anything it doesn't recognize. Unknown ids show their full id,
+// which is wrong-looking rather than wrongly-attributed.
+// When a second provider lands, this should come from the provider instead.
+const getTierName = (modelId: string): string =>
+  MODELS_BY_ID.get(modelId)?.label ?? modelId
 
 // barWidth is capped so the bar can't wrap in narrow terminals
 const renderProgress = (tier: string, current: number, total:number, barWidth = 20) => {
