@@ -79,6 +79,10 @@ program
     '--capture-misses <filepath>',
     'append wrong answers to this file as grader fixtures',
   )
+  .option(
+    '--current <model-id>',
+    'the model you run today — savings are measured against it',
+  )
   .action(async options => {
     // Convert flags from text into numbers — everything typed in a terminal arrives as a string
     const volume = Number(options.volume);
@@ -91,6 +95,14 @@ program
       return program.error('Error: Pass rate must be a number between 1 and 100.');
     }
     const passBar = passRate / 100;
+
+    // Validated here rather than silently ignored: a typo would otherwise fall
+    // back to the priciest-tier baseline and quietly report the wrong savings.
+    if (options.current && !MODEL_IDS.includes(options.current)) {
+      return program.error(
+        `Error: Unknown --current model '${options.current}'. Expected one of: ${MODEL_IDS.join(', ')}.`,
+      );
+    }
 
     // Load dataset and provider cleanly inside an error-handling boundary
     let prompt: string
@@ -166,7 +178,12 @@ program
         options.captureMisses,
       );
     }
-    printReport(summaries, auditCost, dataset.length);
+    printReport(
+      summaries,
+      auditCost,
+      dataset.length,
+      ...(options.current ? ([options.current] as const) : []),
+    );
   });
 
 // Everything above only describes the command — parse() reads what was typed and acts on it

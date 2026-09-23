@@ -24,7 +24,8 @@ export const fakeProvider: ModelProvider = {
     return {
       text: answer,
       inputTokens: 50,
-      outputTokens: 4
+      outputTokens: 4,
+      stopReason: 'end_turn'
     }
   }
 }

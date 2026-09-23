@@ -15,6 +15,7 @@ const result = (overrides: Partial<AuditResult> = {}): AuditResult => ({
   pass: true,
   inputTokens: 100,
   outputTokens: 10,
+  status: 'graded',
   ...overrides,
 });
 
@@ -106,6 +107,72 @@ describe('summarize', () => {
     expect(rows[0]?.misses).toEqual([
       { input: 'wrong', answer: 'account', expected: 'billing' },
     ]);
+  });
+});
+
+describe('summarize with incomplete calls', () => {
+  it('does not count an incomplete call as a miss', () => {
+    const rows = summarize(
+      [
+        result({ pass: true }),
+        result({ pass: false, status: 'incomplete', note: 'network' }),
+      ],
+      [HAIKU],
+      2,
+      1000,
+      1,
+    );
+
+    // One graded pass, one call that never produced an answer.
+    expect(rows[0]?.passes).toBe(1);
+    expect(rows[0]?.misses).toEqual([]);
+    expect(rows[0]?.incomplete).toBe(1);
+  });
+
+  it('never marks a model passed when any call was incomplete', () => {
+    // Every graded answer was correct, but part of the run is missing, so
+    // "it passed" is a claim the data cannot support.
+    const rows = summarize(
+      [
+        result({ pass: true }),
+        result({ pass: false, status: 'incomplete', note: 'max_tokens' }),
+      ],
+      [HAIKU],
+      2,
+      1000,
+      0.5,
+    );
+
+    expect(rows[0]?.passed).toBe(false);
+  });
+
+  it('prices only graded calls, so zero-token failures do not deflate cost', () => {
+    const gradedOnly = summarize([result()], [HAIKU], 2, 1000, 1);
+    const withFailure = summarize(
+      [result(), result({ status: 'incomplete', inputTokens: 0, outputTokens: 0 })],
+      [HAIKU],
+      2,
+      1000,
+      1,
+    );
+
+    expect(withFailure[0]?.monthlyCost).toBeCloseTo(
+      gradedOnly[0]?.monthlyCost ?? 0,
+      10,
+    );
+  });
+
+  it('reports a model with no gradeable answers at all as not passed', () => {
+    const rows = summarize(
+      [result({ status: 'incomplete', note: 'network' })],
+      [HAIKU],
+      5,
+      1000,
+      1,
+    );
+
+    expect(rows[0]).toMatchObject({ passes: 0, passed: false, incomplete: 1 });
+    expect(rows[0]?.monthlyCost).toBe(0);
   });
 });
 

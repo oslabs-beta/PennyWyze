@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { runAudit } from '../../src/audit.js'
 import { fakeProvider } from '../../src/providers/fake-provider.js'
 import { exactMatchScorer } from '../../src/scorers/exact-match-scorer.js'
+import type { ModelProvider } from '../../src/providers/provider.js'
 
 // authored here so the tests own their truth — expecteds match the fake's
 // first two deals, so this set passes cleanly
@@ -17,6 +18,85 @@ const impossibleDataset = [
   { input: 'q2', expected: 'pink-mongoose' },
   { input: 'q3', expected: 'teal-walrus' },
 ]
+
+// Fails on the 2nd call, succeeds on the 1st — proves the audit keeps what it
+// already paid for instead of discarding the whole run.
+const flakyProvider: ModelProvider = {
+  calls: 0,
+  async run() {
+    // @ts-expect-error -- counter lives on the object for test bookkeeping
+    this.calls++
+    // @ts-expect-error -- see above
+    if (this.calls > 1) throw new Error('connection reset')
+    return {
+      text: 'billing',
+      inputTokens: 50,
+      outputTokens: 4,
+      stopReason: 'end_turn',
+    }
+  },
+} as ModelProvider
+
+const truncatingProvider: ModelProvider = {
+  async run() {
+    return {
+      text: 'bil',
+      inputTokens: 50,
+      outputTokens: 1000,
+      stopReason: 'max_tokens',
+    }
+  },
+}
+
+describe('runAudit incomplete handling', () => {
+  it('keeps results already paid for when a call fails', async () => {
+    const results = await runAudit(
+      flakyProvider,
+      [
+        { input: 'q1', expected: 'billing' },
+        { input: 'q2', expected: 'billing' },
+        { input: 'q3', expected: 'billing' },
+      ],
+      'test prompt',
+      ['model-a'],
+      1,
+      exactMatchScorer,
+    )
+
+    // The first answer survives; the failure is recorded, not thrown.
+    expect(results).toHaveLength(2)
+    expect(results[0]).toMatchObject({ status: 'graded', pass: true })
+    expect(results[1]).toMatchObject({ status: 'incomplete', pass: false })
+    expect(results[1]?.note).toContain('connection reset')
+  })
+
+  it('records a truncated answer as incomplete, not as a wrong answer', async () => {
+    const results = await runAudit(
+      truncatingProvider,
+      [{ input: 'q1', expected: 'billing' }],
+      'test prompt',
+      ['model-a'],
+      1,
+      exactMatchScorer,
+    )
+
+    expect(results[0]).toMatchObject({ status: 'incomplete' })
+    expect(results[0]?.note).toContain('max_tokens')
+  })
+
+  it('lets later models run after an earlier one fails', async () => {
+    const results = await runAudit(
+      flakyProvider,
+      [{ input: 'q1', expected: 'billing' }],
+      'test prompt',
+      ['model-a', 'model-b'],
+      1,
+      exactMatchScorer,
+    )
+
+    expect(results.map(r => r.modelId)).toEqual(['model-a', 'model-b'])
+  })
+})
 
 describe('runAudit', () => {
 
