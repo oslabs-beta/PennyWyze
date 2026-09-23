@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { runAudit } from '../../src/audit.js'
-import { fakeProvider } from '../../src/providers/fake-provider.js'
+import { createFakeProvider } from '../../src/providers/fake-provider.js'
 import { exactMatchScorer } from '../../src/scorers/exact-match-scorer.js'
 import type { ModelProvider } from '../../src/providers/provider.js'
 
@@ -11,8 +11,8 @@ const tinyDataset = [
   { input: 'q2', expected: 'tech-problem' },
 ]
 
-// expecteds no dealt card can ever match — guarantees a miss on every
-// question regardless of deck position
+// expecteds no answer in the fake's list can ever match — guarantees a miss
+// on every question
 const impossibleDataset = [
   { input: 'q1', expected: 'purple-elephant' },
   { input: 'q2', expected: 'pink-mongoose' },
@@ -101,7 +101,7 @@ describe('runAudit incomplete handling', () => {
 describe('runAudit', () => {
 
   it('returns one record per model per question, with the right fields', async () => {
-    const results = await runAudit(fakeProvider, tinyDataset, 'test prompt', ['model-a'], 1, exactMatchScorer)
+    const results = await runAudit(createFakeProvider(), tinyDataset, 'test prompt', ['model-a'], 1, exactMatchScorer)
 
     expect(results).toHaveLength(2)
     expect(results[0]).toMatchObject({ modelId: 'model-a', question: 'q1', expected: 'billing' })
@@ -111,7 +111,7 @@ describe('runAudit', () => {
 
   it('stops a failing model early at the full pass bar', async () => {
     // full bar allows 0 misses — the first guaranteed miss breaks the loop
-    const results = await runAudit(fakeProvider, impossibleDataset, 'test prompt', ['model-a'], 1, exactMatchScorer)
+    const results = await runAudit(createFakeProvider(), impossibleDataset, 'test prompt', ['model-a'], 1, exactMatchScorer)
 
     expect(results).toHaveLength(1)
     expect(results[0]?.pass).toBe(false)
@@ -120,9 +120,60 @@ describe('runAudit', () => {
   it('lets a model survive misses at a loosened pass bar', async () => {
     // 3 questions at 0.6 → floor(3 × 0.4) = 1 miss allowed —
     // survives the 1st, breaks on the 2nd: exactly 2 records
-    const results = await runAudit(fakeProvider, impossibleDataset, 'test prompt', ['model-a'], 0.6, exactMatchScorer)
+    const results = await runAudit(createFakeProvider(), impossibleDataset, 'test prompt', ['model-a'], 0.6, exactMatchScorer)
 
     expect(results).toHaveLength(2)
   })
 
+})
+
+describe('runAudit progress reporting', () => {
+  it('reports progress through the callback, with no terminal involved', async () => {
+    const questions: Array<[string, number, number]> = []
+    const finished: Array<[string, string]> = []
+
+    await runAudit(
+      createFakeProvider(),
+      tinyDataset,
+      'test prompt',
+      ['model-a'],
+      1,
+      exactMatchScorer,
+      {
+        onQuestion: (tier, current, total) =>
+          questions.push([tier, current, total]),
+        onModelDone: (tier, outcome) => finished.push([tier, outcome]),
+      },
+    )
+
+    // One call per question, 1-based, carrying the dataset size.
+    expect(questions).toEqual([
+      ['model-a', 1, 2],
+      ['model-a', 2, 2],
+    ])
+    expect(finished).toEqual([['model-a', 'complete']])
+  })
+
+  it('reports early stopping and incompleteness as distinct outcomes', async () => {
+    const outcomes: string[] = []
+    const record = { onModelDone: (_t: string, o: string) => outcomes.push(o) }
+
+    await runAudit(createFakeProvider(), impossibleDataset, 'p', ['m'], 1, exactMatchScorer, record)
+    await runAudit(truncatingProvider, tinyDataset, 'p', ['m'], 1, exactMatchScorer, record)
+
+    expect(outcomes).toEqual(['early_stop', 'incomplete'])
+  })
+
+  it('runs fine with no progress callbacks at all', async () => {
+    const results = await runAudit(
+      createFakeProvider(),
+      tinyDataset,
+      'test prompt',
+      ['model-a'],
+      1,
+      exactMatchScorer,
+    )
+
+    expect(results).toHaveLength(2)
+  })
 })

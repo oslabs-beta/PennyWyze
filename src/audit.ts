@@ -1,6 +1,5 @@
 import type { ModelProvider } from './providers/provider.js'
 import type { GoldenExample } from './golden-dataset/schema.js';
-import chalk from 'chalk'
 import type { Scorer } from './scorers/scorer.js';
 import { MODELS_BY_ID } from './providers/anthropic-models.js';
 
@@ -31,17 +30,20 @@ export type AuditResult = {
 const getTierName = (modelId: string): string =>
   MODELS_BY_ID.get(modelId)?.label ?? modelId
 
-// barWidth is capped so the bar can't wrap in narrow terminals
-const renderProgress = (tier: string, current: number, total:number, barWidth = 20) => {
-  const percentage = Math.min(1, Math.max(0, current / total))
-  const filledLength = Math.round(barWidth * percentage)
-  const emptyLength = barWidth - filledLength
-
-  const bar = '█'.repeat(filledLength) + chalk.dim('░'.repeat(emptyLength))
-  // \x1b[K clears from cursor to end of line, avoiding hardcoded spaces
-  process.stdout.write(
-    chalk.bold.cyan(`\r Auditing ▷ ${tier} ${bar} ${current}/${total}\x1b[K`),
-  );
+/**
+ * How the loop reports progress. Supplied by the caller so this file never
+ * writes to a terminal: the CLI passes one that draws a bar, tests pass
+ * nothing, and a non-terminal caller can pass its own.
+ */
+export type AuditProgress = {
+  /** Called before each question, with 1-based position in this model's run. */
+  onQuestion?: (tier: string, current: number, total: number) => void
+  /** Called once per model, when its run ends and why. */
+  onModelDone?: (
+    tier: string,
+    outcome: 'complete' | 'early_stop' | 'incomplete',
+    detail: { questionsRun: number; total: number; note: string | null },
+  ) => void
 }
 
 export const runAudit = async (
@@ -50,7 +52,8 @@ export const runAudit = async (
   prompt: string, 
   modelIds: string[],
   passBar: number, // a fraction, 0–1 (cli converts from the 0–100 flag)
-  scorer: Scorer
+  scorer: Scorer,
+  progress: AuditProgress = {},
 ): Promise<AuditResult[]> => {
   const results: AuditResult[] = []
 
@@ -69,7 +72,7 @@ export const runAudit = async (
       for(const example of dataset){
         questionCount++
 
-        renderProgress(tier, questionCount, dataset.length)
+        progress.onQuestion?.(tier, questionCount, dataset.length)
 
         // A failed call ends this model's run, not the audit. Every result
         // already collected has been paid for, and the other models are
@@ -137,13 +140,17 @@ export const runAudit = async (
 
         // Resolve the ticker into a permanent line — green if it survived,
         // red if it failed early; \n releases the line for the next model
-        const completedAll = questionCount === dataset.length && !incompleteNote;
-        const statusMsg = incompleteNote
-        ? chalk.yellow(`\r ! ${tier} incomplete — ${incompleteNote}\x1b[K\n`)
-        : completedAll
-        ? chalk.green(`\r ✓ ${tier} audited — ${dataset.length} questions\x1b[K\n`)
-        : chalk.red(`\r ✗ ${tier} failed — stopped at question ${questionCount}\x1b[K\n`);
-      process.stdout.write(statusMsg);
+        const outcome = incompleteNote
+          ? 'incomplete'
+          : questionCount === dataset.length
+            ? 'complete'
+            : 'early_stop'
+
+        progress.onModelDone?.(tier, outcome, {
+          questionsRun: questionCount,
+          total: dataset.length,
+          note: incompleteNote,
+        })
     }
   return results
 }

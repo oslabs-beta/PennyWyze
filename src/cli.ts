@@ -10,6 +10,7 @@ import { loadGoldenDataset } from './golden-dataset/load-golden-dataset.js';
 import { loadPrompt } from './golden-dataset/load-prompt.js';
 import { runAudit, type AuditResult } from './audit.js';
 import { printReport } from './report.js';
+import { terminalProgress } from './progress.js';
 import { fakeProvider } from './providers/fake-provider.js';
 import { anthropicProvider } from './providers/anthropic-provider.js';
 import { ANTHROPIC_MODELS } from './providers/anthropic-models.js';
@@ -143,6 +144,7 @@ program
         MODEL_IDS,
         passBar, // as a fraction — early stopping needs it to know if a model can still recover
         exactMatchScorer,
+        terminalProgress(),
       );
     } catch (err: any) {
       restoreCursor(); 
