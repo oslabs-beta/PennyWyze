@@ -4,7 +4,7 @@
   "description": "Audits which Claude tier is the cheapest one that still passes your quality bar.",
   "main": "index.js",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "bin": {
     "pennywyze": "./dist/cli.js"

@@ -43,7 +43,7 @@ PennyWyze is that evaluation harness, already built. Point it at your real promp
 
 ## Getting Started
 
-Requires [Node 18+](https://nodejs.org/) on macOS, Linux, or Windows.
+Requires [Node 20+](https://nodejs.org/) on macOS, Linux, or Windows.
 
 ```bash
 npm install -g pennywyze
@@ -80,15 +80,15 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
  ✓ haiku audited — 50 questions
 
   PENNYWYZE AUDIT REPORT
-┌───────────────────────────┬────────────┬────────────────┐
-│ MODEL                     │  ACCURACY  │ EST. COST / MO │
-├───────────────────────────┼────────────┼────────────────┤
-│ claude-opus-5             │ 48/50 PASS │   $200.94 / mo │
-├───────────────────────────┼────────────┼────────────────┤
-│ claude-sonnet-5           │ 49/50 PASS │    $77.92 / mo │
-├───────────────────────────┼────────────┼────────────────┤
-│ claude-haiku-4-5-20251001 │ 49/50 PASS │    $26.26 / mo │
-└───────────────────────────┴────────────┴────────────────┘
+┌──────────────────┬────────────┬────────────────┐
+│ MODEL            │  ACCURACY  │ EST. COST / MO │
+├──────────────────┼────────────┼────────────────┤
+│ claude-opus-5    │ 48/50 PASS │   $200.94 / mo │
+├──────────────────┼────────────┼────────────────┤
+│ claude-sonnet-5  │ 49/50 PASS │    $77.92 / mo │
+├──────────────────┼────────────┼────────────────┤
+│ claude-haiku-4-5 │ 49/50 PASS │    $26.26 / mo │
+└──────────────────┴────────────┴────────────────┘
 
   FAILED TEST DETAILS
 -------------------------------------------------------
@@ -111,14 +111,14 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 
 -------------------------------------------------------
 
- ● claude-haiku-4-5-20251001
+ ● claude-haiku-4-5
    └─ Input:    "I can't log in and honestly at this point I just want my ..."
       Received: "account"
       Expected: "billing"
 
 -------------------------------------------------------
 
- VERDICT  Switch to claude-haiku-4-5-20251001 - save ~$174.68/mo.
+ VERDICT  Switch to claude-haiku-4-5 - save ~$174.68/mo.
 
   ℹ Audit cost: $0.15
 ```
@@ -132,6 +132,9 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 | `--volume <count>` | no | 100000 | messages/month — scales cost, never the verdict |
 | `--pass-rate <percent>` | no | 100 | minimum score to pass, 1–100 |
 | `--capture-misses <filepath>` | no | off | append every wrong answer to this file, as grader fixtures |
+| `--current <model-id>` | no | — | the model you run today; savings are measured against it |
+| `--fake` | no | off | run the whole pipeline against a built-in stand-in, free and offline |
+| `--version` | — | — | print the installed version |
 
 ## How It Grades
 
