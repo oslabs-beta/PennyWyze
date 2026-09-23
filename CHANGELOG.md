@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.0] - 9/22/26
+
+### Added
+- `--capture-misses <filepath>`: opt-in capture of wrong answers as grader fixtures, written only to the path you name
+- Test asserting every captured miss in `real-misses.jsonl` still scores as a miss, so the saved fixtures now guard the scorer's normalization
+
+### Fixed
+- Audits no longer write a `tests/scorers/fixtures/` directory into the current working directory. Capture is off unless `--capture-misses` is passed
+
 ## [1.0.0] - 9/24/26
 
 ### Added

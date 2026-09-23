@@ -131,6 +131,7 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 | `--dataset <filepath>` | yes | — | your golden dataset |
 | `--volume <count>` | no | 100000 | messages/month — scales cost, never the verdict |
 | `--pass-rate <percent>` | no | 100 | minimum score to pass, 1–100 |
+| `--capture-misses <filepath>` | no | off | append every wrong answer to this file, as grader fixtures |
 
 ## How It Grades
 
