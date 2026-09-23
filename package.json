@@ -12,7 +12,9 @@
   "scripts": {
     "test": "vitest",
     "dev": "tsx src/cli.ts",
-    "build": "tsup src/cli.ts --format esm --clean"
+    "build": "tsup src/cli.ts --format esm --clean",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
+    "test:run": "vitest run"
   },
   "repository": {
     "type": "git",

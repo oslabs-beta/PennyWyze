@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { printReport } from '../../src/report.js'
+import type { ModelSummary } from '../../src/summarize.js'
 
-const baseModel = (overrides = {}) => ({
+const baseModel = (overrides: Partial<ModelSummary> = {}): ModelSummary => ({
   name: 'model',
-  score: '50/50',
+  passes: 50,
+  total: 50,
+  stopped: false,
   monthlyCost: 100,
   passed: true,
   misses: [],
@@ -21,7 +24,7 @@ describe('printReport', () => {
     logSpy.mockRestore()
   })
 
-  const printedOutput = () => logSpy.mock.calls.map(call => call.join(' ')).join('\n')
+  const printedOutput = () => logSpy.mock.calls.map((call: unknown[]) => call.join(' ')).join('\n')
 
   it('recommends the cheapest model that passed, never a cheaper one that failed', () => {
     // Three models on purpose: the winner has to be genuinely cheaper than
