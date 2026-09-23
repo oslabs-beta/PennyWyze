@@ -18,7 +18,14 @@
     "type": "git",
     "url": "git+https://github.com/oslabs-beta/PennyWyze.git"
   },
-  "keywords": ["cli", "anthropic", "claude", "llm", "cost-optimization", "evaluation"],
+  "keywords": [
+    "cli",
+    "anthropic",
+    "claude",
+    "llm",
+    "cost-optimization",
+    "evaluation"
+  ],
   "author": "PennyWyze Team",
   "contributors": [
     "Olivia McKelvey",
@@ -45,5 +52,8 @@
     "tsx": "^4.23.1",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }

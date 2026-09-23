@@ -2,6 +2,8 @@
 
 import 'dotenv/config';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { dirname } from 'path';
+import { createRequire } from 'module';
 import { Command } from 'commander';
 import chalk from 'chalk';
 
@@ -15,6 +17,13 @@ import { costOfCall } from './cost/calculator.js';
 import { exactMatchScorer } from './scorers/exact-match-scorer.js';
 
 const program = new Command();
+
+// Read at runtime rather than hardcoding, so `npm version` stays the single
+// source of truth and --version can't drift from what was published.
+// Resolves to the package root from both src/cli.ts and dist/cli.js.
+const { version } = createRequire(import.meta.url)('../package.json') as {
+  version: string;
+};
 // Derived from ANTHROPIC_MODELS so prices and IDs never drift out of sync.
 // Object key order (opus, sonnet, haiku) is preserved here — that's why the
 // report always prints in that order, without anyone sorting it explicitly.
@@ -54,13 +63,18 @@ const calculateResultsCost = (results: AuditResult[]): number => {
   }, 0);
 };
 
-const saveMissFixtures = (misses: AuditResult[]): void => {
+// Opt-in only, via --capture-misses. Writes solely to the path the user named —
+// never to a path we pick, because a relative default lands in whatever directory
+// the command happened to be run from, which for an installed CLI is someone
+// else's repo.
+const saveMissFixtures = (misses: AuditResult[], filePath: string): void => {
   if (misses.length === 0) return;
 
-  const fixturesDir = 'tests/scorers/fixtures';
-  if (!existsSync(fixturesDir)) mkdirSync(fixturesDir, { recursive: true });
+  const dir = dirname(filePath);
+  if (dir && !existsSync(dir)) mkdirSync(dir, { recursive: true });
 
-  const filePath = `${fixturesDir}/real-misses.jsonl`;
+  // Merge with whatever is already there so repeated runs accumulate
+  // distinct misses instead of overwriting the file each time.
   const existingLines = existsSync(filePath)
     ? readFileSync(filePath, 'utf8').trim().split('\n').filter(Boolean)
     : [];
@@ -73,8 +87,11 @@ const saveMissFixtures = (misses: AuditResult[]): void => {
   writeFileSync(filePath, allLines.join('\n') + '\n');
 };
 
+// .version() belongs on the program itself — .command() returns the subcommand,
+// so chaining it after would attach --version to `audit` instead of `pennywyze`.
+program.name('pennywyze').version(version);
+
 program
-  .name('pennywyze')
   .command('audit')
   .description(
     'Benchmark Claude tiers against your golden dataset to return the lowest-cost passing model with projected monthly savings',
@@ -91,6 +108,10 @@ program
     '--pass-rate <percentage>',
     'minimum pass rate required, 0-100',
     '100',
+  )
+  .option(
+    '--capture-misses <filepath>',
+    'append wrong answers to this file as grader fixtures',
   )
   .action(async options => {
     // Convert flags from text into numbers — everything typed in a terminal arrives as a string
@@ -201,8 +222,11 @@ program
       };
     });
     const auditCost = calculateResultsCost(results);
-    if (!options.fake) {
-      saveMissFixtures(results.filter(r => !r.pass));
+    if (options.captureMisses) {
+      saveMissFixtures(
+        results.filter(r => !r.pass),
+        options.captureMisses,
+      );
     }
     printReport(summaries, auditCost, dataset.length);
   });
