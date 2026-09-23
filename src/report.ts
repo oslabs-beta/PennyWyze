@@ -71,21 +71,23 @@ export const printReport = (models: ModelSummary[], auditCost: number, datasetSi
   const passed = models.filter(model => model.passed)
   const cheapest = passed.sort((a,b) => a.monthlyCost - b.monthlyCost)[0]
 
-  if (!cheapest) {
-    // Nothing passed — a legitimate outcome, not an error. It means the
-    // user is already on the cheapest tier that meets their bar.
+  // Savings compare against whichever model actually cost the most this
+  // run, not a hardcoded tier — matters once more than three tiers exist.
+  const maxCost = Math.max(...models.map(m => m.monthlyCost))
+  const savings = cheapest ? maxCost - cheapest.monthlyCost : 0
+
+  // Two ways there is nothing to switch to: nothing passed at all, or the
+  // only passing model IS the priciest one, which nets zero. Both are
+  // legitimate outcomes, not errors — the user is already on the cheapest
+  // tier that meets their bar.
+  if (!cheapest || savings <= 0) {
     console.log(
-      chalk.bgRed.black.bold(' VERDICT ') + 
+      chalk.bgRed.black.bold(' VERDICT ') +
       ' ' +
       chalk.bold('No cheaper model meets quality criteria.')
     )
     console.log(chalk.dim('  You are currently on the optimal pricing tier.'))
   } else {
-    // Savings compare against whichever model actually cost the most this
-    // run, not a hardcoded tier — matters once more than three tiers exist.
-    const maxCost = Math.max(...models.map(m => m.monthlyCost))
-    const savings = maxCost - cheapest.monthlyCost
-
     console.log(
       chalk.bgGreen.black.bold(' VERDICT ') +
       ` Switch to ${chalk.bold.cyan(cheapest.name)} - save ~$${savings.toFixed(2)}/mo.`
