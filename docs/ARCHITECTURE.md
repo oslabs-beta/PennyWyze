@@ -55,12 +55,12 @@ One interface, `ModelProvider`, with one method: `run(modelId, systemPrompt, use
 
 ## `src/providers/anthropic-models.ts` — pricing and model IDs
 
-A single object mapping each tier (`opus`, `sonnet`, `haiku`) to its model id, display label, input/output price per million tokens, request timeout, and reasoning effort. This is the one place to edit when Anthropic changes pricing or model ids. The CLI derives its list of models to audit from this object, so the report's row order (opus, then sonnet, then haiku) comes from this object's own key order, nothing sorts it explicitly. `MODELS_BY_ID` is the same data keyed by api id, so per-call lookups don't rescan the object.
+A single object mapping each tier (`fable`, `opus`, `sonnet`, `haiku`) to its model id, display label, input/output price per million tokens, request timeout, and reasoning effort. This is the one place to edit when Anthropic changes pricing or model ids. The CLI derives its list of models to audit from this object, so the report's row order comes from this object's own key order, nothing sorts it explicitly — the entries are kept most-expensive-first so the table reads as a price ladder, and a test enforces that. `MODELS_BY_ID` is the same data keyed by api id, so per-call lookups don't rescan the object.
 
 Two fields carry decisions rather than facts:
 
-- **`effort`** caps how much a model deliberates. On Claude 5 models thinking is on by default and thinking tokens bill at the *output* rate, so without a cap the pricier tiers are charged for reasoning a one-word classification never needed — skewing the very comparison this tool exists to produce. It is `null` for Haiku 4.5, which rejects `output_config.effort` with a 400 and has no default thinking to cap.
-- **`timeoutMs`** is per model because a thinking tier and Haiku don't deserve the same ceiling. A single short client-level timeout made slow-but-fine answers look like network failures.
+- **`effort`** caps how much a model deliberates. On Claude 5 models thinking is on by default and thinking tokens bill at the *output* rate, so without a cap the pricier tiers are charged for reasoning a one-word classification never needed — skewing the very comparison this tool exists to produce. It is `null` for Haiku 4.5, which does not support the parameter at all and returns a 400, and which has no adaptive thinking to cap. Every other tier defaults to `medium` or `high` effort, so capping it to `low` is what makes a one-word classification cost comparable across tiers.
+- **`timeoutMs`** is per model because a thinking tier and Haiku don't deserve the same ceiling. A single short client-level timeout made slow-but-fine answers look like network failures. Fable gets the longest (5 minutes): a single request can run minutes on a hard input.
 
 ## `src/providers/fake-provider.ts` — the free stand-in
 

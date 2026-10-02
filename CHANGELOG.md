@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ## [Unreleased]
 
 ### Added
+- Claude Fable 5.1 as a fourth tier ($10/$50 per million tokens), so the audit covers the current flagship rather than stopping below it
 - `--current <model-id>`: names the model you run today, so savings are measured against what you actually pay instead of the most expensive tier audited
 - CI on every pull request (typecheck, tests, build) across Node 20 and 22
 - Prettier config and `format` / `format:check` scripts
@@ -15,10 +16,11 @@ All notable changes to this project are documented in this file.
 - Opus and Sonnet are no longer billed for reasoning this task never asked for. Effort is set per model from the catalog, and omitted for Haiku 4.5, which rejects the parameter
 - Progress labels no longer fall back to "haiku" for unrecognized model ids
 - Haiku's model id corrected to the canonical `claude-haiku-4-5`
-- Request timeouts are per model (120s for thinking tiers, 60s for Haiku). A single 20s ceiling made slow-but-valid answers look like network failures
+- Request timeouts are per model (5 min for Fable, 3 min for Opus, 2 min for Sonnet, 1 min for Haiku). A single 20s ceiling made slow-but-valid answers look like network failures
 - `README.md` and `docs/ARCHITECTURE.md` corrected where they described behaviour the code no longer has
 
 ### Changed
+- Model lineup moved to the current generation: Opus 5 → **Opus 5.5** ($5/$25 → $4/$20) and Sonnet 5 → **Sonnet 5.5**. Opus 5 and Sonnet 5 are now legacy models, and Opus 5.5 is both newer and 20% cheaper than the tier we were previously pricing
 - Node 20 or newer is required (18 is end-of-life)
 - The audit loop no longer writes to the terminal; progress is reported through callbacks, with the rendering in `progress.ts`
 - The fake provider is a factory, so tests no longer share answer-list position
