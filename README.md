@@ -138,6 +138,7 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 | `--pass-rate <percent>` | no | 100 | minimum score to pass, 1–100 |
 | `--capture-misses <filepath>` | no | off | append every wrong answer to this file, as grader fixtures |
 | `--current <model-id>` | no | — | the model you run today; savings are measured against it |
+| `--json-out <filepath>` | no | off | also write the full run to this file as JSON, for CI or later comparison |
 | `--fake` | no | off | run the whole pipeline against a built-in stand-in, free and offline |
 | `--version` | — | — | print the installed version |
 
