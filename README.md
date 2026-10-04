@@ -20,7 +20,7 @@
 
 Most teams default to the smartest, most expensive Claude tier because checking whether a cheaper one would work means building a whole test harness — so they never check, and quietly overpay every month.
 
-PennyWyze is that evaluation harness, already built. Point it at your real prompt and a handful of examples you know the right answer to; it runs all three Claude tiers against them, grades every answer, prices each tier from real token usage, and tells you the cheapest one that still passes.
+PennyWyze is that evaluation harness, already built. Point it at your real prompt and a handful of examples you know the right answer to; it runs all four Claude tiers — Fable, Opus, Sonnet and Haiku — against them, grades every answer, prices each tier from real token usage, and tells you the cheapest one that still passes.
 
 **What makes it different:**
 - Costs are measured from real API token counts, never estimated
@@ -74,26 +74,31 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 
 *(Sped up for length — a real 50-example audit takes about 3 minutes. The final report and verdict play at real speed.)*
 
+*Figures below are an illustrative run at the default 100,000 messages/month.*
+
 ```
+ ✓ fable audited — 50 questions
  ✓ opus audited — 50 questions
  ✓ sonnet audited — 50 questions
  ✓ haiku audited — 50 questions
 
   PENNYWYZE AUDIT REPORT
-┌──────────────────┬────────────┬────────────────┐
-│ MODEL            │  ACCURACY  │ EST. COST / MO │
-├──────────────────┼────────────┼────────────────┤
-│ claude-opus-5    │ 48/50 PASS │   $200.94 / mo │
-├──────────────────┼────────────┼────────────────┤
-│ claude-sonnet-5  │ 49/50 PASS │    $77.92 / mo │
-├──────────────────┼────────────┼────────────────┤
-│ claude-haiku-4-5 │ 49/50 PASS │    $26.26 / mo │
-└──────────────────┴────────────┴────────────────┘
+┌───────────────────┬────────────┬────────────────┐
+│ MODEL             │  ACCURACY  │ EST. COST / MO │
+├───────────────────┼────────────┼────────────────┤
+│ claude-fable-5-1  │ 48/50 PASS │   $401.88 / mo │
+├───────────────────┼────────────┼────────────────┤
+│ claude-opus-5-5   │ 48/50 PASS │   $160.75 / mo │
+├───────────────────┼────────────┼────────────────┤
+│ claude-sonnet-5-5 │ 49/50 PASS │    $77.92 / mo │
+├───────────────────┼────────────┼────────────────┤
+│ claude-haiku-4-5  │ 49/50 PASS │    $26.26 / mo │
+└───────────────────┴────────────┴────────────────┘
 
   FAILED TEST DETAILS
 -------------------------------------------------------
 
- ● claude-opus-5
+ ● claude-opus-5-5
    ├─ Input:    "The site keeps logging me out every five minutes, super a..."
    │  Received: "account"
    │  Expected: "technical"
@@ -104,7 +109,7 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 
 -------------------------------------------------------
 
- ● claude-sonnet-5
+ ● claude-sonnet-5-5
    └─ Input:    "The site keeps logging me out every five minutes, super a..."
       Received: "account"
       Expected: "technical"
@@ -118,9 +123,9 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 
 -------------------------------------------------------
 
- VERDICT  Switch to claude-haiku-4-5 - save ~$174.68/mo.
+ VERDICT  Switch to claude-haiku-4-5 - save ~$375.62/mo.
 
-  ℹ Audit cost: $0.15
+  ℹ Audit cost: $0.32
 ```
 
 ## Flags
