@@ -21,6 +21,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 - Model lineup moved to the current generation: Opus 5 → **Opus 5.5** ($5/$25 → $4/$20) and Sonnet 5 → **Sonnet 5.5**. Opus 5 and Sonnet 5 are now legacy models, and Opus 5.5 is both newer and 20% cheaper than the tier we were previously pricing
+- Breaking: `--current` no longer accepts `claude-opus-5` or `claude-sonnet-5`. Use `claude-opus-5-5` or `claude-sonnet-5-5`
 - Node 20 or newer is required (18 is end-of-life)
 - The audit loop no longer writes to the terminal; progress is reported through callbacks, with the rendering in `progress.ts`
 - The fake provider is a factory, so tests no longer share answer-list position
