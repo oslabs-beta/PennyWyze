@@ -203,8 +203,8 @@ Questions or Code of Conduct concerns: [pennywyzeosp@gmail.com](mailto:pennywyze
 | Real cost projections + audit self-cost | ✅ |
 | Free offline `--fake` mode for development | ✅ |
 | Published to the npm registry | ✅ |
-| Claude Fable 5 as a fourth tier | 🙏🏻 |
-| Structured JSON output | 🙏🏻 |
+| Claude Fable 5.1 as a fourth tier | ✅ |
+| Structured JSON output (`--json-out`) | ✅ |
 | JSON grading (deterministic, for structured answers) | 🙏🏻 |
 | Shareable HTML report | 🙏🏻 |
 | GitHub Action — re-audit in CI against a committed baseline | 🙏🏻 |
