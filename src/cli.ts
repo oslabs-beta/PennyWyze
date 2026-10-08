@@ -23,6 +23,8 @@ import { anthropicProvider } from './providers/anthropic-provider.js';
 import { ANTHROPIC_MODELS } from './providers/anthropic-models.js';
 import { calculateResultsCost, summarize } from './summarize.js';
 import { exactMatchScorer } from './scorers/exact-match-scorer.js';
+import { jsonScorer } from './scorers/json-scorer.js';
+import type { Scorer } from './scorers/scorer.js';
 
 const program = new Command();
 
@@ -84,6 +86,11 @@ program
     '100',
   )
   .option(
+    '--grader <exact|json>',
+    'how answers are compared: exact text match, or JSON structure',
+    'exact',
+  )
+  .option(
     '--capture-misses <filepath>',
     'append wrong answers to this file as grader fixtures',
   )
@@ -107,6 +114,21 @@ program
       return program.error('Error: Pass rate must be a number between 1 and 100.');
     }
     const passBar = passRate / 100;
+
+    // Graders by name, so an unknown value fails with the valid options
+    // instead of silently falling back to exact matching and reporting a
+    // score the user didn't ask for.
+    const GRADERS: Record<string, Scorer> = {
+      exact: exactMatchScorer,
+      json: jsonScorer,
+    };
+
+    const scorer = GRADERS[options.grader];
+    if (!scorer) {
+      return program.error(
+        `Error: Unknown --grader '${options.grader}'. Expected one of: ${Object.keys(GRADERS).join(', ')}.`,
+      );
+    }
 
     // Validated here rather than silently ignored: a typo would otherwise fall
     // back to the priciest-tier baseline and quietly report the wrong savings.
@@ -174,7 +196,7 @@ program
         prompt,
         MODEL_IDS,
         passBar, // as a fraction — early stopping needs it to know if a model can still recover
-        exactMatchScorer,
+        scorer,
         terminalProgress(),
       );
     } catch (err: any) {
@@ -235,9 +257,10 @@ program
             dataset,
             passRate,
             volume,
-            // Hardcoded because exact-match is the only grader there is.
-            // Becomes the selected grader's name once there is a choice.
-            grader: 'exact',
+            // Recorded so a saved run says how it was graded. Comparing an
+            // exact-match baseline against a json-graded run would be
+            // comparing two different measurements.
+            grader: options.grader,
             currentModel,
             models: summaries,
             verdict,

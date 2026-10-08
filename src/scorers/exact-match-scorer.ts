@@ -1,14 +1,10 @@
 import type { Scorer } from "./scorer.js";
+import { stripCodeFences } from "./strip-code-fences.js";
 
 const normalize = (text:string):string => {
   // Order matters: strip wrappers (code fences, quotes) before touching the
   // core text, so a quoted or fenced answer normalizes the same as a bare one.
-  let s = text
-    .trim()
-    .replace(/```[a-z]*\n?/g, "")
-    .replace(/```/g, "")
-    .trim()
-  s = s.toLowerCase().replace(/[.!]+$/, "");
+  const s = stripCodeFences(text).toLowerCase().replace(/[.!]+$/, "");
   return s.replace(/^["']|["']$/g, "");
 }
 

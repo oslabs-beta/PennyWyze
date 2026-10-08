@@ -136,6 +136,7 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 | `--dataset <filepath>` | yes | — | your golden dataset |
 | `--volume <count>` | no | 100000 | messages/month — scales cost, never the verdict |
 | `--pass-rate <percent>` | no | 100 | minimum score to pass, 1–100 |
+| `--grader <exact\|json>` | no | exact | how answers are compared — exact text, or JSON structure |
 | `--capture-misses <filepath>` | no | off | append every wrong answer to this file, as grader fixtures |
 | `--current <model-id>` | no | — | the model you run today; savings are measured against it |
 | `--json-out <filepath>` | no | off | also write the full run to this file as JSON, for CI or later comparison. **Contains the full text of every missed question** — don't commit it if your inputs are sensitive |
@@ -145,6 +146,21 @@ pennywyze audit --prompt prompt.md --dataset dataset.jsonl --pass-rate 90
 ## How It Grades
 
 Both sides are cleaned first (quotes, casing, code fences, trailing punctuation stripped), then compared **exactly** — not "contains." A decorated correct answer passes; a wrong answer never does, and an answer buried in a sentence fails on purpose, because ignoring "respond with one word" is a real bug in production. The winner is always the *cheapest tier that passed* — never just the cheapest tier.
+
+### Structured answers
+
+If your prompt asks for JSON rather than a single label, use `--grader json`. Both sides are parsed and compared as **data**, so key order and whitespace stop mattering:
+
+```
+expected:  {"label":"billing","priority":"high"}
+model:     { "priority": "high", "label": "billing" }     ← exact: FAIL, json: PASS
+```
+
+Same answer, written differently. Under exact matching that counts as wrong, which measures the model's formatting habits instead of its accuracy.
+
+It stays strict about everything that isn't formatting. Changed values fail. `1` and `"1"` are different, because your code does arithmetic on that value. Array order matters, since a ranked list's order *is* the answer. Extra keys fail, for the same reason a correct label buried in a sentence fails — the output spec wasn't followed. Capitalization matters too, unlike exact matching, because a JSON value feeds a parser or an enum rather than a human reader.
+
+No model is involved, so it costs nothing and gives the same answer every time.
 
 ## Repeatability
 
@@ -205,7 +221,7 @@ Questions or Code of Conduct concerns: [pennywyzeosp@gmail.com](mailto:pennywyze
 | Published to the npm registry | ✅ |
 | Claude Fable 5.1 as a fourth tier | ✅ |
 | Structured JSON output (`--json-out`) | ✅ |
-| JSON grading (deterministic, for structured answers) | 🙏🏻 |
+| JSON grading (deterministic, for structured answers) | ✅ |
 | Shareable HTML report | 🙏🏻 |
 | GitHub Action — re-audit in CI against a committed baseline | 🙏🏻 |
 | Flexible dataset input formats (CSV, etc.) | 🙏🏻 |
