@@ -6,11 +6,13 @@ All notable changes to this project are documented in this file.
 
 ### Added
 - Claude Fable 5.1 as a fourth tier ($10/$50 per million tokens), so the audit covers the current flagship rather than stopping below it
+- `--json-out <filepath>`: writes the full audit to a JSON file alongside the usual table — every model's score and cost, the verdict as data, the settings used, and sha256 fingerprints of the prompt and dataset so a saved run can be compared to a later one meaningfully. The path is validated before the audit runs, and refused if it points at your prompt or dataset. Note the file contains the full text of every missed question
 - `--current <model-id>`: names the model you run today, so savings are measured against what you actually pay instead of the most expensive tier audited
 - CI on every pull request (typecheck, tests, build) across Node 20 and 22
 - Prettier config and `format` / `format:check` scripts
 
 ### Fixed
+- When no model met the pass bar, the verdict claimed "You are currently on the optimal pricing tier" — which isn't true if nothing worked. That case now reads "No model met your pass bar", with a pointer to the misses or a lower `--pass-rate`. The two findings were indistinguishable before the verdict carried a reason
 - A failed API call no longer discards the whole audit. The failure is recorded, that model stops, and the remaining models finish
 - A truncated or declined response is no longer graded as a wrong answer. Providers report `stop_reason`, and anything other than `end_turn` is recorded as incomplete and excluded from scores, misses and cost
 - Opus and Sonnet are no longer billed for reasoning this task never asked for. Effort is set per model from the catalog, and omitted for Haiku 4.5, which rejects the parameter
