@@ -1,3 +1,7 @@
+<!-- Target branch: `dev`, unless this is a release PR into `main`.
+     Check the base branch above before creating — GitHub does not always
+     default to the right one. -->
+
 ## What does this PR do?
 
 <!-- Briefly describe the change and why it's needed -->

@@ -34,7 +34,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for a full file-by-file tour.
 
 `stopReason` is the one that isn't obvious, and it carries real weight: it's how the audit tells a *wrong* answer apart from one that was never finished. A truncated or declined response is recorded as incomplete and kept out of the score, instead of counting as a miss.
 
-**`'end_turn'` is the only value that means "complete answer". Any other string marks the answer incomplete.** So you have to translate your provider's vocabulary into ours: OpenAI's `"stop"` and Google's `"STOP"` both mean a finished answer, and must be mapped to `'end_turn'`. Pass them through unmapped and every answer from your provider is discarded as incomplete, so no model ever passes.
+**`'end_turn'` is the only value that means "complete answer". Any other string marks the answer incomplete.** So you have to translate your provider's vocabulary into ours: OpenAI's `"stop"` and Google's `"STOP"` both mean a finished answer, and must be mapped to `'end_turn'`. Pass them through unmapped and every model's run stops at its first call, marked incomplete — so no model ever passes.
 
 `null` is the exception, and means "this provider tells us nothing". Those answers are graded normally — the audit has no basis to call them incomplete. Use it only when that's genuinely true, never to satisfy the type: a provider that *could* report truncation but returns `null` instead gets its cut-off answers graded as wrong, silently.
 
