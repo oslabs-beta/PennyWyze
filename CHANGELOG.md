@@ -12,6 +12,7 @@ All notable changes to this project are documented in this file.
 - Prettier config and `format` / `format:check` scripts
 
 ### Fixed
+- When no model met the pass bar, the verdict claimed "You are currently on the optimal pricing tier" — which isn't true if nothing worked. That case now reads "No model met your pass bar", with a pointer to the misses or a lower `--pass-rate`. The two findings were indistinguishable before the verdict carried a reason
 - A failed API call no longer discards the whole audit. The failure is recorded, that model stops, and the remaining models finish
 - A truncated or declined response is no longer graded as a wrong answer. Providers report `stop_reason`, and anything other than `end_turn` is recorded as incomplete and excluded from scores, misses and cost
 - Opus and Sonnet are no longer billed for reasoning this task never asked for. Effort is set per model from the catalog, and omitted for Haiku 4.5, which rejects the parameter

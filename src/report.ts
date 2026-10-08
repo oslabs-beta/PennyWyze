@@ -96,7 +96,20 @@ export const printReport = (
     }
   }
 
-  if (verdict.recommended === null) {
+  // Two different findings, told apart by reason rather than both printed as
+  // "you're on the optimal tier" — which is false when nothing passed at all.
+  if (verdict.reason === 'nothing_passed') {
+    console.log(
+      chalk.bgRed.black.bold(' VERDICT ') +
+      ' ' +
+      chalk.bold('No model met your pass bar.')
+    )
+    console.log(
+      chalk.dim(
+        '  Review the misses above, or lower --pass-rate if the bar is stricter than you need.',
+      ),
+    )
+  } else if (verdict.recommended === null) {
     console.log(
       chalk.bgRed.black.bold(' VERDICT ') +
       ' ' +

@@ -61,7 +61,9 @@ describe('printReport', () => {
     expect(output).not.toContain('Switch to')
   })
 
-  it('reports no cheaper option when nothing passed, instead of naming a verdict', () => {
+  it('says nothing met the bar when nothing passed', () => {
+    // Not "you are on the optimal tier" — nothing worked, so there is no
+    // claim to make about which tier is optimal.
     const models = [
       baseModel({ name: 'opus', monthlyCost: 200, passed: false }),
       baseModel({ name: 'sonnet', monthlyCost: 80, passed: false }),
@@ -70,7 +72,22 @@ describe('printReport', () => {
     printReport(models, 0.15, 50, decideVerdict(models))
 
     const output = printedOutput()
+    expect(output).toContain('No model met your pass bar.')
+    expect(output).not.toContain('optimal pricing tier')
+    expect(output).not.toContain('Switch to')
+  })
+
+  it('says you are already on the optimal tier when something passed but nothing is cheaper', () => {
+    const models = [
+      baseModel({ name: 'cheap-but-failed', monthlyCost: 10, passed: false }),
+      baseModel({ name: 'pricey-but-passed', monthlyCost: 200, passed: true }),
+    ]
+
+    printReport(models, 0.15, 50, decideVerdict(models))
+
+    const output = printedOutput()
     expect(output).toContain('No cheaper model meets quality criteria.')
+    expect(output).toContain('optimal pricing tier')
     expect(output).not.toContain('Switch to')
   })
 
