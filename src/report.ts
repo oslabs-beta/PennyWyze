@@ -2,7 +2,7 @@ import Table from 'cli-table3';
 import chalk from 'chalk';
 
 import type { ModelSummary } from './summarize.js';
-import { decideVerdict } from './verdict.js';
+import type { Verdict } from './verdict.js';
 
 // Formatting lives here, not in summarize() — the summary carries counts,
 // this turns them into the "48/50 (stopped)" the table shows.
@@ -18,12 +18,11 @@ export const printReport = (
   auditCost: number,
   datasetSize: number,
   /**
-   * The model the user is paying for today, from --current. Savings are
-   * measured against it. Without it there is no way to know what the user
-   * actually runs, so the priciest tier audited stands in — which overstates
-   * savings for anyone not already on that tier.
+   * The decision, made upstream by decideVerdict. Passed in rather than
+   * computed here so the printed verdict and the saved run record are
+   * literally the same object.
    */
-  currentModelId?: string,
+  verdict: Verdict,
 ) => {
   console.log('\n' + chalk.bold.cyan('  PENNYWYZE AUDIT REPORT'))
 
@@ -96,8 +95,6 @@ export const printReport = (
     console.log('\n' + chalk.dim('-'.repeat(55)) + '\n')
     }
   }
-
-  const verdict = decideVerdict(models, currentModelId)
 
   if (verdict.recommended === null) {
     console.log(

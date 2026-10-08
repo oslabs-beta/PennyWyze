@@ -14,6 +14,10 @@ import { terminalProgress } from './progress.js';
 import { decideVerdict } from './verdict.js';
 import { buildRunRecord } from './run-record/build.js';
 import { writeRunRecord } from './run-record/write.js';
+import {
+  checkOutputPath,
+  prepareOutputPath,
+} from './run-record/output-path.js';
 import { fakeProvider } from './providers/fake-provider.js';
 import { anthropicProvider } from './providers/anthropic-provider.js';
 import { ANTHROPIC_MODELS } from './providers/anthropic-models.js';
@@ -125,6 +129,22 @@ program
       return program.error(`Error: ${err.message}`)
     }
 
+    // Checked before the audit runs: a bad --json-out path is a one-second fix
+    // beforehand and a wasted paid audit afterwards.
+    if (options.jsonOut) {
+      try {
+        checkOutputPath(options.jsonOut, {
+          prompt: options.prompt,
+          dataset: options.dataset,
+        });
+        prepareOutputPath(options.jsonOut);
+      } catch (err) {
+        return program.error(
+          `Error: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
     const provider = options.fake ? fakeProvider : anthropicProvider;
 
     // Captured before the first call so the record says when the audit began,
@@ -195,37 +215,44 @@ program
 
     // The same decision the report prints — computed once, so the file and the
     // terminal can never disagree about who won.
+    // Decided once here, then handed to both consumers, so the printed
+    // verdict and the saved one cannot disagree.
     const verdict = decideVerdict(
       summaries,
       ...(currentModel ? ([currentModel] as const) : []),
     );
 
-    printReport(
-      summaries,
-      auditCost,
-      dataset.length,
-      ...(currentModel ? ([currentModel] as const) : []),
-    );
+    printReport(summaries, auditCost, dataset.length, verdict);
 
     if (options.jsonOut) {
-      writeRunRecord(
-        options.jsonOut,
-        buildRunRecord({
-          startedAt,
-          toolVersion: version,
-          prompt,
-          dataset,
-          passRate,
-          volume,
-          // Hardcoded because exact-match is the only grader. When
-          // --grader semantic lands this becomes the chosen one's name.
-          grader: 'exact',
-          currentModel,
-          models: summaries,
-          verdict,
-          auditCostUsd: auditCost,
-        }),
-      );
+      try {
+        writeRunRecord(
+          options.jsonOut,
+          buildRunRecord({
+            startedAt,
+            toolVersion: version,
+            prompt,
+            dataset,
+            passRate,
+            volume,
+            // Hardcoded because exact-match is the only grader there is.
+            // Becomes the selected grader's name once there is a choice.
+            grader: 'exact',
+            currentModel,
+            models: summaries,
+            verdict,
+            auditCostUsd: auditCost,
+          }),
+        );
+      } catch (err) {
+        // The audit itself succeeded and has already been printed — report the
+        // write failure without discarding what the user just paid for.
+        return program.error(
+          `Error: Could not write '${options.jsonOut}': ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
     }
   });
 

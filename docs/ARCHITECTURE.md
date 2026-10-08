@@ -136,8 +136,9 @@ What `--json-out` writes: one JSON file describing an entire audit. The terminal
 Three decisions in here that aren't obvious:
 
 - **The hashes cover what was measured, not the file bytes.** The prompt hash is of the sanitized prompt actually sent to the model, and the dataset hash is of the parsed examples. So reformatting a dataset's whitespace isn't a change, while editing an expected answer is. Their purpose is to let a reader tell "quality regressed" apart from "this baseline measured a different prompt, so comparing them is meaningless" — without that, a CI gate reports failures that aren't real, which is how a team ends up switching the check off.
-- **Misses are stored in full.** The report truncates inputs to 60 characters so its tree view doesn't wrap; a saved record that inherited that would be useless for diagnosing a miss a week later.
+- **Misses are stored in full.** The report truncates inputs to 60 characters so its tree view doesn't wrap; a saved record that inherited that would be useless for diagnosing a miss a week later. **This makes the file more sensitive than it looks:** it contains the complete text of every question a model got wrong — real customer messages, for a support classifier — where `--capture-misses` stores only the answer and the expected label. These records are meant to be committed as CI baselines, so say so in any docs that recommend committing them, and don't commit one built from sensitive inputs.
 - **`schemaVersion` is checked, not just recorded.** Bump it whenever a change would break a reader of an older file.
+- **The output path is validated before the audit, not at write time.** `--json-out` pointing at the prompt or the dataset is refused outright, because the record is written with a plain overwrite and the audit has already finished by then — the user would lose both the file and the run. An uncreatable folder is also caught up front, since discovering it afterwards means paying for every call a second time. Both live in `output-path.ts`.
 
 ## `src/report.ts` — the printed output
 

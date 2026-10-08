@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 - Claude Fable 5.1 as a fourth tier ($10/$50 per million tokens), so the audit covers the current flagship rather than stopping below it
-- `--json-out <filepath>`: writes the full audit to a JSON file alongside the usual table — every model's score and cost, the verdict as data, the settings used, and sha256 fingerprints of the prompt and dataset so a saved run can be compared to a later one meaningfully
+- `--json-out <filepath>`: writes the full audit to a JSON file alongside the usual table — every model's score and cost, the verdict as data, the settings used, and sha256 fingerprints of the prompt and dataset so a saved run can be compared to a later one meaningfully. The path is validated before the audit runs, and refused if it points at your prompt or dataset. Note the file contains the full text of every missed question
 - `--current <model-id>`: names the model you run today, so savings are measured against what you actually pay instead of the most expensive tier audited
 - CI on every pull request (typecheck, tests, build) across Node 20 and 22
 - Prettier config and `format` / `format:check` scripts
