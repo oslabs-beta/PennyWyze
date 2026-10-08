@@ -30,7 +30,13 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for a full file-by-file tour.
 
 ## Extending PennyWyze
 
-**Adding a new model provider** (OpenAI, Google, etc.): implement `ModelProvider` from `src/providers/provider.ts`. Your `run()` method needs to return `{ text, inputTokens, outputTokens }`. Look at `src/providers/anthropic-provider.ts` as a reference implementation, and note the response-parsing gotchas documented there before assuming a different provider's response shape is simpler than it looks.
+**Adding a new model provider** (OpenAI, Google, etc.): implement `ModelProvider` from `src/providers/provider.ts`. Your `run()` method returns `{ text, inputTokens, outputTokens, stopReason }`. Look at `src/providers/anthropic-provider.ts` as a reference implementation, and note the response-parsing gotchas documented there before assuming a different provider's response shape is simpler than it looks.
+
+`stopReason` is the one that isn't obvious, and it carries real weight: it's how the audit tells a *wrong* answer apart from one that was never finished. A truncated or declined response is recorded as incomplete and kept out of the score, instead of counting as a miss.
+
+**`'end_turn'` is the only value that means "complete answer". Any other string marks the answer incomplete.** So you have to translate your provider's vocabulary into ours: OpenAI's `"stop"` and Google's `"STOP"` both mean a finished answer, and must be mapped to `'end_turn'`. Pass them through unmapped and every model's run stops at its first call, marked incomplete — so no model ever passes.
+
+`null` is the exception, and means "this provider tells us nothing". Those answers are graded normally — the audit has no basis to call them incomplete. Use it only when that's genuinely true, never to satisfy the type: a provider that *could* report truncation but returns `null` instead gets its cut-off answers graded as wrong, silently.
 
 **Adding a new grading strategy**: implement `Scorer` from `src/scorers/scorer.ts`. Your `score()` method takes the model's answer and the expected answer and returns a boolean. `src/scorers/exact-match-scorer.ts` is the reference implementation.
 
@@ -38,11 +44,13 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for a full file-by-file tour.
 
 ## Submitting a change
 
+Work lands on `dev`, not `main`. `main` tracks what's published to npm; `dev` is where finished-but-unreleased work accumulates until a release. So day-to-day contributions branch from `dev` and target `dev`.
+
 1. Fork the repo
-2. Create a feature branch (`git checkout -b feature/your-feature`)
+2. Create a feature branch from `dev` (`git checkout dev && git pull && git checkout -b feature/your-feature`)
 3. Make your change, with tests if it touches logic
 4. Commit (`git commit -m 'Add your feature'`)
-5. Push to your fork and open a pull request against `main`
+5. Push to your fork and open a pull request against `dev`
 
 Small, focused PRs are easier to review than large ones that bundle unrelated changes, if your change naturally splits into independent pieces, consider opening it as more than one PR.
 

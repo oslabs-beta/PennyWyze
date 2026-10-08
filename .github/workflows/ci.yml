@@ -3,7 +3,10 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    # Both, because a PR is only tested against a predicted merge. Two PRs
+    # approved separately are each tested without the other, so the combined
+    # state that actually lands is verified here and nowhere else.
+    branches: [main, dev]
 
 jobs:
   check:
