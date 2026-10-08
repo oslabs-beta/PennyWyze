@@ -174,7 +174,7 @@ If you hit one of these, the fix is usually immediate:
 
 ## Contributing & Development
 
-Contributions are welcome — fork the repo, branch, commit, and open a PR against `main`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
+Contributions are welcome — fork the repo, branch from `dev`, commit, and open a PR against `dev`. (`main` tracks what's published to npm; `dev` is where finished work waits for a release.) See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
 Build from source instead of installing from npm:
 
