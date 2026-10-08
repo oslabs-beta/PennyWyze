@@ -91,6 +91,23 @@ Known limitation, left deliberately unaddressed: a judge would also need the ori
 
 Normalizes both sides (strip code fences, quotes, capitalization, trailing punctuation) and then requires exact equality, not "contains." A correct answer wearing decoration passes; a right answer buried in a sentence still fails, because ignoring an output-format instruction is a real production bug, not a technicality. This file's tests are partly seeded by `tests/scorers/fixtures/real-misses.jsonl` — real wrong answers captured from real audits, which `tests/scorers/real-misses.test.ts` replays to assert each one still scores as a miss. Loosen the normalization too far and a genuine miss starts passing, and that test goes red. The file grows only when someone opts in with `--capture-misses <path>`; it is never written automatically, because a relative default path lands in whatever directory the installed CLI happened to be run from.
 
+## `src/scorers/json-scorer.ts` — the structured grader
+
+`--grader json`. Parses both sides and compares the data, so a correct answer written with the keys in a different order stops being graded as wrong. Deterministic and free; no model is asked anything.
+
+Four rules, each arguable and so each written into the code next to what enforces it:
+
+- **Key order is ignored** — the whole reason this exists; objects have no meaningful key order.
+- **Array order is significant** — arrays are ordered by definition, and a ranked list's order is part of the answer. An unordered-collection mode would need its own flag.
+- **Types are strict** — `1` is not `"1"`. A string where a number was expected is a production bug, not a formatting quirk.
+- **Extra keys fail** — returning more than the spec asked for is a deviation, the same judgement the exact grader makes about a correct label buried in a sentence.
+
+**Gotcha:** it is *stricter* than the exact grader about capitalization. The exact grader lowercases both sides, because a capitalized label is decoration; inside JSON a value feeds a parser or an enum, where `"Billing"` and `"billing"` are different strings. The deliberate asymmetry has a test pinning it.
+
+Unparseable input on either side scores as a miss rather than throwing. If it's the model's answer, that's a real failure — it was asked for structured output and didn't produce it. If it's the expected answer, the dataset is at fault, and the miss list shows the raw text so the user can see which side is wrong.
+
+`stripCodeFences` is shared with the exact grader, because models fence structured output whether or not you asked them to. It's the only part of the exact grader's cleanup that is safe to reuse here: lowercasing would alter keys and values, and stripping surrounding quotes would break the JSON.
+
 ## `src/audit.ts` — the loop
 
 Everything upstream feeds this file; everything downstream reads what it produces. For each model, for each question, it calls the provider, grades the answer with the scorer, and pushes one record onto a results list. The provider, the scorer, and the progress reporter are all received as parameters, never imported directly, which is the entire swap mechanism for fake-vs-real, exact-match-vs-future-grader, and terminal-vs-silent.
